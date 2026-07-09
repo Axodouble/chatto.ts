@@ -7,6 +7,7 @@ const connection_1 = require("./realtime/connection");
 const events_2 = require("./realtime/events");
 const rooms_1 = require("./managers/rooms");
 const messages_1 = require("./managers/messages");
+const integrated_1 = require("./auth/integrated");
 class ChattoClient extends events_1.EventEmitter {
     rooms;
     messages;
@@ -22,6 +23,10 @@ class ChattoClient extends events_1.EventEmitter {
         this.rooms = new rooms_1.RoomManager(this.rest);
         this.messages = new messages_1.MessageManager(this.rest);
         this.wireRealtime();
+    }
+    static async login(options) {
+        const { token } = await (0, integrated_1.loginWithPassword)(options.baseUrl, options.login, options.password);
+        return new ChattoClient({ baseUrl: options.baseUrl, token });
     }
     async connect() {
         await this.realtime.connect();

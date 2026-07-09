@@ -4,6 +4,7 @@ import { RealtimeConnection } from './realtime/connection'
 import { mapFrameToEvent } from './realtime/events'
 import { RoomManager } from './managers/rooms'
 import { MessageManager } from './managers/messages'
+import { loginWithPassword } from './auth/integrated'
 import type { Message } from './resources/message'
 import type { MessageDeleteEvent, ReactionEvent, ChattoClientOptions } from './types'
 import type { ServerFrame } from './realtime/frames'
@@ -38,6 +39,11 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
     this.rooms = new RoomManager(this.rest)
     this.messages = new MessageManager(this.rest)
     this.wireRealtime()
+  }
+
+  static async login(options: { baseUrl: string; login: string; password: string }): Promise<ChattoClient> {
+    const { token } = await loginWithPassword(options.baseUrl, options.login, options.password)
+    return new ChattoClient({ baseUrl: options.baseUrl, token })
   }
 
   async connect(): Promise<void> {

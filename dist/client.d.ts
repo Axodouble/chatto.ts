@@ -20,6 +20,11 @@ export declare class ChattoClient extends EventEmitter<ClientEventMap> {
     private readonly rest;
     private readonly realtime;
     constructor(options: ChattoClientOptions, realtimeFactory?: (wsUrl: string, token: string) => RealtimeConnection);
+    static login(options: {
+        baseUrl: string;
+        login: string;
+        password: string;
+    }): Promise<ChattoClient>;
     connect(): Promise<void>;
     disconnect(): Promise<void>;
     private wireRealtime;
