@@ -68,7 +68,7 @@ client.on('disconnect', () => {})
 const rooms: Room[]       = await client.rooms.list()
 const room: Room          = await client.rooms.fetch(roomId)
 const msgs: Message[]     = await room.fetchHistory({ limit?: number, before?: string })
-await room.send(new MessageBuilder().setContent('Hello!'))
+const msg = await room.send(new MessageBuilder().setContent('Hello!'))
 
 // Messages
 const msg = await client.messages.send(roomId, new MessageBuilder().setContent('Hi'))
@@ -126,7 +126,7 @@ Chatto's realtime events are invalidation signals — they carry IDs, not full p
 
 ## WebSocket Protocol
 
-Eight `@bufbuild/protobuf` message types cover the full realtime protocol:
+Ten `@bufbuild/protobuf` message types cover the full realtime protocol:
 
 **Client → Server:**
 - `RealtimeClientHello` — first frame, carries `bearer_token`
