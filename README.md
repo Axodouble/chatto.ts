@@ -12,7 +12,8 @@ The documentation itself is bound to change.
 
 Only way to use it for now is as the direct git repository, using `npm install git+https://github.com/axodouble/chatto.ts` or `bun i git+https://github.com/axodouble/chatto.ts`.
 
-⚠️ CURRENTLY ONLY PASSWORD AUTHENTICATION WORKS ⚠️
+### ⚠️ CURRENTLY ONLY PASSWORD AUTHENTICATION WORKS ⚠️
+
 This is because https://github.com/chattocorp/chatto/issues/266 is not yet implemented.
 Once that is the case I intend to change it to allow for dedicated bot API tokens using a bot account.
 
