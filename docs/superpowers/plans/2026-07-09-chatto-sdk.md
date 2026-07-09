@@ -6,11 +6,11 @@
 
 **Architecture:** A `ChattoClient` (EventEmitter) owns a `RestClient` (fetch + JSON Connect protocol) and a `RealtimeConnection` (ws + protobuf frames). Managers (`RoomManager`, `MessageManager`) return rich resource objects (`Room`, `Message`). All request/response shapes are Zod-validated; public TypeScript types are derived with `z.infer<>`.
 
-**Tech Stack:** TypeScript 5, Zod 3, protobufjs 7, ws 8, Jest + ts-jest
+**Tech Stack:** TypeScript 5, Zod 3, protobufjs 7, ws 8, Bun test runner (built-in)
 
 ## Global Constraints
 
-- Node.js 18+ required (native `fetch` built-in)
+- Bun 1.3+ required (native `fetch` built-in, built-in test runner — use `bun test`, `bunx tsc`, `bun run build`, `bun install`)
 - CommonJS module output (`"module": "CommonJS"` in tsconfig)
 - `strict: true` in tsconfig — no `any` in public APIs
 - All HTTP calls use POST to `/api/connect/<service>/<method>` with headers `Content-Type: application/json` and `Connect-Protocol-Version: 1`
@@ -26,7 +26,6 @@
 ```
 package.json
 tsconfig.json
-jest.config.ts
 src/
   errors.ts                   — ChattoApiError, ChattoParseError
   types.ts                    — z.infer<> re-exports + ChattoClientOptions
@@ -73,10 +72,9 @@ tests/
 **Files:**
 - Create: `package.json`
 - Create: `tsconfig.json`
-- Create: `jest.config.ts`
 
 **Interfaces:**
-- Produces: `npm test` runs Jest; `npx tsc --noEmit` passes
+- Produces: `bun test` finds test files; `bunx tsc --noEmit` passes
 
 - [ ] **Step 1: Create `package.json`**
 
@@ -89,7 +87,7 @@ tests/
   "types": "dist/index.d.ts",
   "scripts": {
     "build": "tsc",
-    "test": "jest",
+    "test": "bun test",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -98,11 +96,8 @@ tests/
     "zod": "^3.23.0"
   },
   "devDependencies": {
-    "@types/jest": "^29.5.0",
-    "@types/node": "^20.0.0",
+    "@types/bun": "latest",
     "@types/ws": "^8.5.0",
-    "jest": "^29.7.0",
-    "ts-jest": "^29.2.0",
     "typescript": "^5.5.0"
   }
 }
@@ -131,45 +126,28 @@ tests/
 }
 ```
 
-- [ ] **Step 3: Create `jest.config.ts`**
-
-```typescript
-import type { Config } from 'jest'
-
-const config: Config = {
-  preset: 'ts-jest',
-  testEnvironment: 'node',
-  roots: ['<rootDir>/tests'],
-  transform: {
-    '^.+\\.tsx?$': ['ts-jest', { tsconfig: { module: 'CommonJS' } }],
-  },
-}
-
-export default config
-```
-
-- [ ] **Step 4: Install dependencies**
+- [ ] **Step 3: Install dependencies**
 
 ```bash
-npm install
+bun install
 ```
 
 Expected: `node_modules/` created, no errors.
 
-- [ ] **Step 5: Verify TypeScript compiles (no src files yet — create placeholder)**
+- [ ] **Step 4: Verify TypeScript compiles (no src files yet — create placeholder)**
 
 ```bash
 mkdir -p src && echo 'export {}' > src/index.ts
-npx tsc --noEmit
+bunx tsc --noEmit
 ```
 
 Expected: no errors.
 
-- [ ] **Step 6: Commit**
+- [ ] **Step 5: Commit**
 
 ```bash
-git add package.json tsconfig.json jest.config.ts src/index.ts
-git -c commit.gpgsign=false commit -m "chore: project scaffold — TypeScript, Jest, deps"
+git add package.json tsconfig.json src/index.ts
+git -c commit.gpgsign=false commit -m "chore: project scaffold — TypeScript, Bun, deps"
 ```
 
 ---
@@ -219,7 +197,7 @@ describe('ChattoParseError', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/errors.test.ts
+bun test tests/errors.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../src/errors'`
@@ -254,7 +232,7 @@ export class ChattoParseError extends Error {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/errors.test.ts
+bun test tests/errors.test.ts
 ```
 
 Expected: PASS
@@ -381,7 +359,7 @@ describe('RemoveReactionResponseSchema', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/schemas/message.test.ts
+bun test tests/schemas/message.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/schemas/message'`
@@ -434,7 +412,7 @@ export const RemoveReactionResponseSchema = z.object({ removed: z.boolean() })
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/schemas/message.test.ts
+bun test tests/schemas/message.test.ts
 ```
 
 Expected: PASS
@@ -547,7 +525,7 @@ describe('GetRoomEventsResponseSchema', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/schemas/room.test.ts
+bun test tests/schemas/room.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/schemas/room'`
@@ -606,7 +584,7 @@ export const GetRoomEventsResponseSchema = z.object({
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/schemas/room.test.ts
+bun test tests/schemas/room.test.ts
 ```
 
 Expected: PASS
@@ -676,7 +654,7 @@ describe('ReactionEventSchema', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/schemas/realtime.test.ts
+bun test tests/schemas/realtime.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/schemas/realtime'`
@@ -702,7 +680,7 @@ export const ReactionEventSchema = z.object({
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/schemas/realtime.test.ts
+bun test tests/schemas/realtime.test.ts
 ```
 
 Expected: PASS
@@ -756,7 +734,7 @@ export interface ChattoClientOptions {
 - [ ] **Step 2: Verify TypeScript**
 
 ```bash
-npx tsc --noEmit
+bunx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -836,7 +814,7 @@ describe('MessageBuilder', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/builders/message.test.ts
+bun test tests/builders/message.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/builders/message'`
@@ -900,7 +878,7 @@ export class MessageBuilder {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/builders/message.test.ts
+bun test tests/builders/message.test.ts
 ```
 
 Expected: PASS
@@ -931,13 +909,14 @@ git -c commit.gpgsign=false commit -m "feat: MessageBuilder"
 ```typescript
 // tests/rest/client.test.ts
 import { z } from 'zod'
+import { spyOn } from 'bun:test'
 import { RestClient } from '../../src/rest/client'
 import { ChattoApiError, ChattoParseError } from '../../src/errors'
 
 const schema = z.object({ id: z.string() })
 
-function mockFetch(status: number, body: unknown): jest.SpyInstance {
-  return jest.spyOn(global, 'fetch').mockResolvedValue({
+function mockFetch(status: number, body: unknown) {
+  return spyOn(globalThis, 'fetch').mockResolvedValue({
     ok: status >= 200 && status < 300,
     status,
     statusText: status === 200 ? 'OK' : 'Error',
@@ -998,7 +977,7 @@ describe('RestClient.post', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/rest/client.test.ts
+bun test tests/rest/client.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/rest/client'`
@@ -1054,7 +1033,7 @@ export class RestClient {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/rest/client.test.ts
+bun test tests/rest/client.test.ts
 ```
 
 Expected: PASS
@@ -1177,7 +1156,7 @@ describe('Message', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/resources/message.test.ts
+bun test tests/resources/message.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/resources/message'`
@@ -1255,7 +1234,7 @@ export class Message {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/resources/message.test.ts
+bun test tests/resources/message.test.ts
 ```
 
 Expected: PASS
@@ -1390,7 +1369,7 @@ describe('Room', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/resources/room.test.ts
+bun test tests/resources/room.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/resources/room'`
@@ -1458,7 +1437,7 @@ export class Room {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/resources/room.test.ts
+bun test tests/resources/room.test.ts
 ```
 
 Expected: PASS
@@ -1542,7 +1521,7 @@ describe('MessageManager', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/managers/messages.test.ts
+bun test tests/managers/messages.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/managers/messages'`
@@ -1590,7 +1569,7 @@ export class MessageManager {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/managers/messages.test.ts
+bun test tests/managers/messages.test.ts
 ```
 
 Expected: PASS
@@ -1675,7 +1654,7 @@ describe('RoomManager', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/managers/rooms.test.ts
+bun test tests/managers/rooms.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/managers/rooms'`
@@ -1715,7 +1694,7 @@ export class RoomManager {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/managers/rooms.test.ts
+bun test tests/managers/rooms.test.ts
 ```
 
 Expected: PASS
@@ -1803,7 +1782,7 @@ describe('encodeClientFrame / decodeServerFrame', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/realtime/frames.test.ts
+bun test tests/realtime/frames.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/realtime/frames'`
@@ -1919,7 +1898,7 @@ export function decodeServerFrame(buffer: Buffer): ServerFrame {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/realtime/frames.test.ts
+bun test tests/realtime/frames.test.ts
 ```
 
 Expected: PASS
@@ -2014,7 +1993,7 @@ describe('mapFrameToEvent', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/realtime/events.test.ts
+bun test tests/realtime/events.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/realtime/events'`
@@ -2064,7 +2043,7 @@ export function mapFrameToEvent(frame: ServerFrame): SdkEvent | null {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/realtime/events.test.ts
+bun test tests/realtime/events.test.ts
 ```
 
 Expected: PASS
@@ -2246,7 +2225,7 @@ describe('RealtimeConnection', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/realtime/connection.test.ts
+bun test tests/realtime/connection.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../../src/realtime/connection'`
@@ -2356,7 +2335,7 @@ export class RealtimeConnection extends EventEmitter<RealtimeConnectionEvents> {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/realtime/connection.test.ts
+bun test tests/realtime/connection.test.ts
 ```
 
 Expected: PASS
@@ -2391,29 +2370,29 @@ git -c commit.gpgsign=false commit -m "feat: RealtimeConnection (ws lifecycle, h
 ```typescript
 // tests/client.test.ts
 import { EventEmitter } from 'events'
+import { mock } from 'bun:test'
 import { ChattoClient } from '../src/client'
 import { RoomManager } from '../src/managers/rooms'
 import { MessageManager } from '../src/managers/messages'
 
-// Jest requires the 'mock' prefix on variables referenced inside jest.mock factories
-// (the call is hoisted; prefixed variables bypass the scope restriction)
-const mockRtInstances: Array<EventEmitter & { connect: jest.Mock; disconnect: jest.Mock }> = []
+// Bun uses mock.module() for module-level mocking (not jest.mock())
+type MockRt = EventEmitter & { connect: ReturnType<typeof mock>; disconnect: ReturnType<typeof mock> }
+const rtInstances: MockRt[] = []
 
-jest.mock('../src/realtime/connection', () => {
-  const { EventEmitter } = require('events')
+mock.module('../src/realtime/connection', () => {
   return {
-    RealtimeConnection: jest.fn().mockImplementation(() => {
+    RealtimeConnection: mock(() => {
       const instance = Object.assign(new EventEmitter(), {
-        connect: jest.fn().mockResolvedValue(undefined),
-        disconnect: jest.fn(),
-      })
-      mockRtInstances.push(instance)
+        connect: mock(() => Promise.resolve()),
+        disconnect: mock(() => {}),
+      }) as MockRt
+      rtInstances.push(instance)
       return instance
     }),
   }
 })
 
-beforeEach(() => { mockRtInstances.length = 0 })
+beforeEach(() => { rtInstances.length = 0 })
 
 describe('ChattoClient', () => {
   it('exposes rooms and messages managers', () => {
@@ -2428,7 +2407,7 @@ describe('ChattoClient', () => {
     client.on('ready', () => readyEvents.push(true))
     await client.connect()
     expect(readyEvents).toHaveLength(1)
-    expect(mockRtInstances[0].connect).toHaveBeenCalled()
+    expect(rtInstances[0].connect).toHaveBeenCalled()
   })
 
   it('disconnect() emits disconnect', async () => {
@@ -2443,7 +2422,7 @@ describe('ChattoClient', () => {
     const client = new ChattoClient({ baseUrl: 'https://chat.example.com', token: 'tk' })
     const errors: Error[] = []
     client.on('error', e => errors.push(e))
-    mockRtInstances[0].emit('error', new Error('ws error'))
+    rtInstances[0].emit('error', new Error('ws error'))
     expect(errors[0]?.message).toBe('ws error')
   })
 
@@ -2451,7 +2430,7 @@ describe('ChattoClient', () => {
     const client = new ChattoClient({ baseUrl: 'https://chat.example.com', token: 'tk' })
     const disconnects: unknown[] = []
     client.on('disconnect', () => disconnects.push(true))
-    mockRtInstances[0].emit('close', false, 0)
+    rtInstances[0].emit('close', false, 0)
     expect(disconnects).toHaveLength(1)
   })
 })
@@ -2460,7 +2439,7 @@ describe('ChattoClient', () => {
 - [ ] **Step 2: Run test to verify it fails**
 
 ```bash
-npx jest tests/client.test.ts
+bun test tests/client.test.ts
 ```
 
 Expected: FAIL — `Cannot find module '../src/client'`
@@ -2561,7 +2540,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
 - [ ] **Step 4: Run test to verify it passes**
 
 ```bash
-npx jest tests/client.test.ts
+bun test tests/client.test.ts
 ```
 
 Expected: PASS
@@ -2605,7 +2584,7 @@ export type {
 - [ ] **Step 2: Run the full test suite**
 
 ```bash
-npx jest
+bun test
 ```
 
 Expected: ALL PASS — no failures across all test files.
@@ -2613,7 +2592,7 @@ Expected: ALL PASS — no failures across all test files.
 - [ ] **Step 3: Run TypeScript typecheck**
 
 ```bash
-npx tsc --noEmit
+bunx tsc --noEmit
 ```
 
 Expected: no errors.
@@ -2621,7 +2600,7 @@ Expected: no errors.
 - [ ] **Step 4: Build**
 
 ```bash
-npm run build
+bun run build
 ```
 
 Expected: `dist/` created with `.js`, `.d.ts`, `.d.ts.map` files. No errors.
