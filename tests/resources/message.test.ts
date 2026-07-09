@@ -90,4 +90,34 @@ describe('Message', () => {
       )
     })
   })
+
+  describe('.reply()', () => {
+    it('calls CreateMessage with inReplyTo and threadRootEventId set to own id when not a thread reply', async () => {
+      const replyData = { ...validMessageData, id: 'evt_2' }
+      const rest = makeRestMock({ message: replyData })
+      const msg = new Message(validMessageData, rest as any)
+      const reply = await msg.reply(new MessageBuilder().setContent('Got it!'))
+      expect(rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService',
+        'CreateMessage',
+        expect.objectContaining({ roomId: 'room_1', inReplyTo: 'evt_1', threadRootEventId: 'evt_1', body: 'Got it!' }),
+        expect.anything(),
+      )
+      expect(reply).toBeInstanceOf(Message)
+    })
+
+    it('uses existing threadRootEventId when message is already a thread reply', async () => {
+      const threadData = { ...validMessageData, inReplyTo: 'evt_0', threadRootEventId: 'evt_0' }
+      const replyData = { ...validMessageData, id: 'evt_2' }
+      const rest = makeRestMock({ message: replyData })
+      const msg = new Message(threadData, rest as any)
+      await msg.reply(new MessageBuilder().setContent('Also replying'))
+      expect(rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService',
+        'CreateMessage',
+        expect.objectContaining({ inReplyTo: 'evt_1', threadRootEventId: 'evt_0' }),
+        expect.anything(),
+      )
+    })
+  })
 })

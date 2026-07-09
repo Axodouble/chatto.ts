@@ -17,6 +17,8 @@ export class Message {
   readonly author: PartialUser
   readonly createdAt: string
   readonly updatedAt: string | undefined
+  readonly inReplyTo: string | undefined
+  readonly threadRootEventId: string | undefined
 
   constructor(data: MessageData, private readonly rest: RestClient) {
     this.id = data.id
@@ -26,6 +28,8 @@ export class Message {
     this.author = new PartialUser(data.actorId, rest)
     this.createdAt = data.createdAt
     this.updatedAt = data.updatedAt
+    this.inReplyTo = data.inReplyTo
+    this.threadRootEventId = data.threadRootEventId
   }
 
   async edit(builder: MessageBuilder): Promise<Message> {
@@ -64,5 +68,24 @@ export class Message {
       { roomId: this.roomId, messageEventId: this.id, emoji },
       RemoveReactionResponseSchema,
     )
+  }
+
+  async reply(builder: MessageBuilder): Promise<Message> {
+    builder.setReplyTo(this.id)
+    builder.setThreadRoot(this.threadRootEventId ?? this.id)
+    const input = builder.buildCreate(this.roomId)
+    const res = await this.rest.post(
+      'chatto.api.v1.MessageService',
+      'CreateMessage',
+      {
+        roomId: input.roomId,
+        body: input.body,
+        inReplyTo: input.inReplyTo,
+        threadRootEventId: input.threadRootEventId,
+        alsoSendToChannel: input.alsoSendToChannel,
+      },
+      MessageResponseSchema,
+    )
+    return new Message(res.message, this.rest)
   }
 }
