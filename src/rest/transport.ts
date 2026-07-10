@@ -13,7 +13,9 @@ import { ChattoApiError } from '../errors'
 export function toChattoError(err: unknown): ChattoApiError {
   if (err instanceof ConnectError) {
     const name = codeNameOf(err.code)
-    return new ChattoApiError(name, err.rawMessage, { code: name, message: err.rawMessage })
+    // Preserve the original ConnectError as `raw` so consumers can still inspect
+    // `.details`/`.metadata`, which the old { code, message } shape lost.
+    return new ChattoApiError(name, err.rawMessage, err)
   }
   const message = err instanceof Error ? err.message : String(err)
   return new ChattoApiError('unknown', message, {})
@@ -51,6 +53,11 @@ function mapErrors<T extends object>(client: T): T {
       if (typeof value !== 'function') return value
       return (...args: unknown[]) => {
         const out = (value as (...a: unknown[]) => unknown).apply(target, args)
+        // All currently-wired RPCs are unary and return a Promise. Streaming RPCs
+        // return an async-iterable instead, which would bypass this `instanceof
+        // Promise` check and skip toChattoError mapping entirely. If a streaming
+        // method is ever wired into createServiceClients, its errors (thrown from
+        // iteration) must be mapped explicitly at the call site.
         return out instanceof Promise ? out.catch((err: unknown) => { throw toChattoError(err) }) : out
       }
     },

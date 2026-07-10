@@ -17,14 +17,14 @@ function emptyToUndef(s: string): string | undefined {
 
 // Protobuf-ES generates enum members with the common prefix stripped; the SDK's
 // public contract exposes the full proto enum value name. Map explicitly.
-const PRESENCE_NAMES: Record<number, string> = {
+export const PRESENCE_NAMES: Record<number, string> = {
   0: 'PRESENCE_STATUS_UNSPECIFIED',
   1: 'PRESENCE_STATUS_ONLINE',
   2: 'PRESENCE_STATUS_AWAY',
   3: 'PRESENCE_STATUS_DO_NOT_DISTURB',
   4: 'PRESENCE_STATUS_OFFLINE',
 }
-const ROOM_KIND_NAMES: Record<number, string> = {
+export const ROOM_KIND_NAMES: Record<number, string> = {
   0: 'ROOM_KIND_UNSPECIFIED',
   1: 'ROOM_KIND_CHANNEL',
   2: 'ROOM_KIND_DM',
