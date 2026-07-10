@@ -1,12 +1,12 @@
-import type { RestClient } from '../rest/client'
+import type { ClientContext } from '../context'
 import { User } from '../resources/user'
 import { GetUserResponseSchema, BatchGetUsersResponseSchema, ListUsersResponseSchema } from '../schemas/user'
 
 export class UserManager {
-  constructor(private readonly rest: RestClient) {}
+  constructor(private readonly ctx: ClientContext) {}
 
   async fetch(userId: string): Promise<User> {
-    const res = await this.rest.post(
+    const res = await this.ctx.rest.post(
       'chatto.api.v1.UserService',
       'GetUser',
       { userId },
@@ -16,7 +16,7 @@ export class UserManager {
   }
 
   async batchFetch(userIds: string[]): Promise<User[]> {
-    const res = await this.rest.post(
+    const res = await this.ctx.rest.post(
       'chatto.api.v1.UserService',
       'BatchGetUsers',
       { userIds },
@@ -26,7 +26,7 @@ export class UserManager {
   }
 
   async list(opts: { search?: string } = {}): Promise<User[]> {
-    const res = await this.rest.post(
+    const res = await this.ctx.rest.post(
       'chatto.api.v1.UserService',
       'ListUsers',
       { search: opts.search },

@@ -1,7 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.PartialUser = exports.User = void 0;
-const user_1 = require("../schemas/user");
+exports.User = void 0;
 class User {
     id;
     login;
@@ -23,19 +22,24 @@ class User {
         this.roles = data.roles;
         this.createdAt = data.createdAt;
     }
+    get username() {
+        return this.login;
+    }
+    static partial(id) {
+        return new User({
+            user: {
+                id,
+                login: id,
+                displayName: id,
+                deleted: false,
+                avatarUrl: undefined,
+                presenceStatus: 'PRESENCE_STATUS_UNSPECIFIED',
+                customStatus: undefined,
+            },
+            roles: [],
+            createdAt: undefined,
+        });
+    }
 }
 exports.User = User;
-class PartialUser {
-    rest;
-    id;
-    constructor(id, rest) {
-        this.rest = rest;
-        this.id = id;
-    }
-    async fetch() {
-        const res = await this.rest.post('chatto.api.v1.UserService', 'GetUser', { userId: this.id }, user_1.GetUserResponseSchema);
-        return new User(res.user);
-    }
-}
-exports.PartialUser = PartialUser;
 //# sourceMappingURL=user.js.map

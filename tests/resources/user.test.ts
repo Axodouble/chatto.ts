@@ -1,5 +1,5 @@
-import { describe, it, expect, mock } from 'bun:test'
-import { User, PartialUser } from '../../src/resources/user'
+import { describe, it, expect } from 'bun:test'
+import { User } from '../../src/resources/user'
 
 const validMember = {
   user: {
@@ -13,10 +13,6 @@ const validMember = {
   },
   roles: ['everyone', 'admin'],
   createdAt: '2026-01-01T00:00:00Z',
-}
-
-function makeRestMock(returnValue: unknown) {
-  return { post: mock().mockResolvedValue(returnValue) }
 }
 
 describe('User', () => {
@@ -34,25 +30,24 @@ describe('User', () => {
   })
 })
 
-describe('PartialUser', () => {
-  it('exposes id', () => {
-    const partial = new PartialUser('user_1', makeRestMock(null) as any)
-    expect(partial.id).toBe('user_1')
+describe('User discord.js ergonomics', () => {
+  const memberData = {
+    user: {
+      id: 'U_1', login: 'ceraia', displayName: 'Ceraia', deleted: false,
+      avatarUrl: 'https://x/a.png', presenceStatus: 'PRESENCE_STATUS_ONLINE',
+    },
+    roles: ['admin'],
+  }
+
+  it('exposes username as an alias of login', () => {
+    const user = new User(memberData as any)
+    expect(user.username).toBe('ceraia')
   })
 
-  describe('.fetch()', () => {
-    it('calls GetUser and returns a User', async () => {
-      const rest = makeRestMock({ user: validMember })
-      const partial = new PartialUser('user_1', rest as any)
-      const user = await partial.fetch()
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.UserService',
-        'GetUser',
-        { userId: 'user_1' },
-        expect.anything(),
-      )
-      expect(user).toBeInstanceOf(User)
-      expect(user.login).toBe('ceraia')
-    })
+  it('User.partial builds a User from just an id', () => {
+    const user = User.partial('U_42')
+    expect(user.id).toBe('U_42')
+    expect(user.displayName).toBe('U_42')
+    expect(user.login).toBe('U_42')
   })
 })

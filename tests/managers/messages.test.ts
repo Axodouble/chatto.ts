@@ -1,49 +1,39 @@
 import { describe, it, expect, mock } from 'bun:test'
 import { MessageManager } from '../../src/managers/messages'
 import { Message } from '../../src/resources/message'
-import { MessageBuilder } from '../../src/builders/message'
+import { Room } from '../../src/resources/room'
+import { User } from '../../src/resources/user'
 
-const validMessage = {
-  id: 'evt_1',
-  roomId: 'room_1',
-  createdAt: '2026-07-09T10:00:00Z',
-  actorId: 'user_1',
-  reactions: [],
+function makeCtx(postReturn: unknown) {
+  const ctx: any = {
+    rest: { post: mock().mockResolvedValue(postReturn) },
+    hydrateMessage: mock(async (data: any) => new Message(data, ctx, {
+      author: User.partial(data.actorId), channel: Room.partial(data.roomId, ctx),
+    })),
+  }
+  return ctx
 }
 
-function makeRestMock(returnValue: unknown) {
-  return { post: mock().mockResolvedValue(returnValue) }
-}
+const msgData = { id: 'evt_1', roomId: 'R_1', createdAt: 't', actorId: 'U_1', body: 'hi', reactions: [] }
 
 describe('MessageManager', () => {
-  describe('.send()', () => {
-    it('calls CreateMessage and returns a Message', async () => {
-      const rest = makeRestMock({ message: validMessage })
-      const manager = new MessageManager(rest as any)
-      const msg = await manager.send('room_1', new MessageBuilder().setContent('Hi'))
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.MessageService',
-        'CreateMessage',
-        expect.objectContaining({ roomId: 'room_1', body: 'Hi' }),
-        expect.anything(),
-      )
-      expect(msg).toBeInstanceOf(Message)
-      expect(msg.id).toBe('evt_1')
-    })
+  it('send() accepts a string and returns a hydrated Message', async () => {
+    const ctx = makeCtx({ message: msgData })
+    const sent = await new MessageManager(ctx).send('R_1', 'hi')
+    expect(ctx.rest.post).toHaveBeenCalledWith(
+      'chatto.api.v1.MessageService', 'CreateMessage',
+      expect.objectContaining({ roomId: 'R_1', body: 'hi' }), expect.anything(),
+    )
+    expect(sent).toBeInstanceOf(Message)
   })
 
-  describe('.fetch()', () => {
-    it('calls GetMessage and returns a Message', async () => {
-      const rest = makeRestMock({ message: validMessage })
-      const manager = new MessageManager(rest as any)
-      const msg = await manager.fetch('room_1', 'evt_1')
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.MessageService',
-        'GetMessage',
-        { roomId: 'room_1', eventId: 'evt_1' },
-        expect.anything(),
-      )
-      expect(msg).toBeInstanceOf(Message)
-    })
+  it('fetch() returns a hydrated Message', async () => {
+    const ctx = makeCtx({ message: msgData })
+    const msg = await new MessageManager(ctx).fetch('R_1', 'evt_1')
+    expect(ctx.rest.post).toHaveBeenCalledWith(
+      'chatto.api.v1.MessageService', 'GetMessage',
+      { roomId: 'R_1', eventId: 'evt_1' }, expect.anything(),
+    )
+    expect(msg.content).toBe('hi')
   })
 })

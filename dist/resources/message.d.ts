@@ -1,20 +1,28 @@
 import type { MessageData } from '../types';
-import type { RestClient } from '../rest/client';
-import type { MessageBuilder } from '../builders/message';
-import { PartialUser } from './user';
+import type { ClientContext } from '../context';
+import type { User } from './user';
+import type { Room } from './room';
+import type { MessagePayload } from '../builders/payload';
 export declare class Message {
-    private readonly rest;
+    private readonly ctx;
     readonly id: string;
-    readonly roomId: string;
-    readonly body: string | undefined;
+    readonly channelId: string;
+    readonly content: string | undefined;
     readonly actorId: string;
-    readonly author: PartialUser;
+    readonly author: User;
+    readonly channel: Room;
     readonly createdAt: string;
-    readonly updatedAt: string | undefined;
-    constructor(data: MessageData, rest: RestClient);
-    edit(builder: MessageBuilder): Promise<Message>;
+    readonly editedAt: string | undefined;
+    readonly inReplyTo: string | undefined;
+    readonly threadRootEventId: string | undefined;
+    constructor(data: MessageData, ctx: ClientContext, resolved: {
+        author: User;
+        channel: Room;
+    });
+    edit(payload: MessagePayload): Promise<Message>;
     delete(): Promise<void>;
     react(emoji: string): Promise<void>;
     removeReaction(emoji: string): Promise<void>;
+    reply(payload: MessagePayload): Promise<Message>;
 }
 //# sourceMappingURL=message.d.ts.map

@@ -18,7 +18,7 @@ describe('RoomManager', () => {
   describe('.list()', () => {
     it('calls ListRooms and returns Room[]', async () => {
       const rest = makeRestMock({ rooms: [{ room: validRoom }] })
-      const manager = new RoomManager(rest as any)
+      const manager = new RoomManager({ rest } as any)
       const rooms = await manager.list()
       expect(rest.post).toHaveBeenCalledWith(
         'chatto.api.v1.RoomDirectoryService',
@@ -35,7 +35,7 @@ describe('RoomManager', () => {
   describe('.fetch()', () => {
     it('calls GetRoom and returns a Room', async () => {
       const rest = makeRestMock({ room: { room: validRoom } })
-      const manager = new RoomManager(rest as any)
+      const manager = new RoomManager({ rest } as any)
       const room = await manager.fetch('room_1')
       expect(rest.post).toHaveBeenCalledWith(
         'chatto.api.v1.RoomDirectoryService',

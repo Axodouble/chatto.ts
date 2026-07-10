@@ -30,6 +30,15 @@ export class MessageBuilder {
     return this
   }
 
+  clone(): MessageBuilder {
+    const copy = new MessageBuilder()
+    copy._content = this._content
+    copy._replyTo = this._replyTo
+    copy._threadRoot = this._threadRoot
+    copy._alsoSendToChannel = this._alsoSendToChannel
+    return copy
+  }
+
   buildCreate(roomId: string): CreateMessageInput {
     return CreateMessageInputSchema.parse({
       roomId,

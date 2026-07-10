@@ -2,10 +2,11 @@ import { EventEmitter } from 'events'
 import { RestClient } from './rest/client'
 import { RealtimeConnection } from './realtime/connection'
 import { mapFrameToEvent } from './realtime/events'
-import { RoomManager } from './managers/rooms'
-import { MessageManager } from './managers/messages'
-import { UserManager } from './managers/users'
+import { ChattoContext } from './context'
 import { loginWithPassword } from './auth/integrated'
+import type { RoomManager } from './managers/rooms'
+import type { MessageManager } from './managers/messages'
+import type { UserManager } from './managers/users'
 import type { Message } from './resources/message'
 import type { MessageDeleteEvent, ReactionEvent, ChattoClientOptions } from './types'
 import type { ServerFrame } from './realtime/frames'
@@ -27,6 +28,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   readonly users: UserManager
   private readonly rest: RestClient
   private readonly realtime: RealtimeConnection
+  private readonly ctx: ChattoContext
 
   constructor(
     options: ChattoClientOptions,
@@ -38,9 +40,10 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
     this.realtime = realtimeFactory
       ? realtimeFactory(wsUrl, options.token)
       : new RealtimeConnection(wsUrl, options.token)
-    this.rooms = new RoomManager(this.rest)
-    this.messages = new MessageManager(this.rest)
-    this.users = new UserManager(this.rest)
+    this.ctx = new ChattoContext(this.rest)
+    this.rooms = this.ctx.rooms
+    this.messages = this.ctx.messages
+    this.users = this.ctx.users
     this.wireRealtime()
   }
 

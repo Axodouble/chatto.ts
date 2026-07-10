@@ -1,6 +1,4 @@
 import type { DirectoryMemberData } from '../types'
-import type { RestClient } from '../rest/client'
-import { GetUserResponseSchema } from '../schemas/user'
 
 export class User {
   readonly id: string
@@ -24,22 +22,24 @@ export class User {
     this.roles = data.roles
     this.createdAt = data.createdAt
   }
-}
 
-export class PartialUser {
-  readonly id: string
-
-  constructor(id: string, private readonly rest: RestClient) {
-    this.id = id
+  get username(): string {
+    return this.login
   }
 
-  async fetch(): Promise<User> {
-    const res = await this.rest.post(
-      'chatto.api.v1.UserService',
-      'GetUser',
-      { userId: this.id },
-      GetUserResponseSchema,
-    )
-    return new User(res.user)
+  static partial(id: string): User {
+    return new User({
+      user: {
+        id,
+        login: id,
+        displayName: id,
+        deleted: false,
+        avatarUrl: undefined,
+        presenceStatus: 'PRESENCE_STATUS_UNSPECIFIED',
+        customStatus: undefined,
+      },
+      roles: [],
+      createdAt: undefined,
+    })
   }
 }

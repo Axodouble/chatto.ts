@@ -1,14 +1,15 @@
-import type { RestClient } from '../rest/client'
-import type { MessageBuilder } from '../builders/message'
+import type { ClientContext } from '../context'
+import type { Message } from '../resources/message'
+import type { MessagePayload } from '../builders/payload'
+import { resolveMessagePayload } from '../builders/payload'
 import { MessageResponseSchema } from '../schemas/message'
-import { Message } from '../resources/message'
 
 export class MessageManager {
-  constructor(private readonly rest: RestClient) {}
+  constructor(private readonly ctx: ClientContext) {}
 
-  async send(roomId: string, builder: MessageBuilder): Promise<Message> {
-    const input = builder.buildCreate(roomId)
-    const res = await this.rest.post(
+  async send(roomId: string, payload: MessagePayload): Promise<Message> {
+    const input = resolveMessagePayload(payload).buildCreate(roomId)
+    const res = await this.ctx.rest.post(
       'chatto.api.v1.MessageService',
       'CreateMessage',
       {
@@ -20,16 +21,16 @@ export class MessageManager {
       },
       MessageResponseSchema,
     )
-    return new Message(res.message, this.rest)
+    return this.ctx.hydrateMessage(res.message)
   }
 
   async fetch(roomId: string, eventId: string): Promise<Message> {
-    const res = await this.rest.post(
+    const res = await this.ctx.rest.post(
       'chatto.api.v1.MessageService',
       'GetMessage',
       { roomId, eventId },
       MessageResponseSchema,
     )
-    return new Message(res.message, this.rest)
+    return this.ctx.hydrateMessage(res.message)
   }
 }

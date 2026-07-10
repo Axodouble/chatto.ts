@@ -1,40 +1,60 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.Message = void 0;
+const payload_1 = require("../builders/payload");
 const message_1 = require("../schemas/message");
-const user_1 = require("./user");
 class Message {
-    rest;
+    ctx;
     id;
-    roomId;
-    body;
+    channelId;
+    content;
     actorId;
     author;
+    channel;
     createdAt;
-    updatedAt;
-    constructor(data, rest) {
-        this.rest = rest;
+    editedAt;
+    inReplyTo;
+    threadRootEventId;
+    constructor(data, ctx, resolved) {
+        this.ctx = ctx;
         this.id = data.id;
-        this.roomId = data.roomId;
-        this.body = data.body;
+        this.channelId = data.roomId;
+        this.content = data.body;
         this.actorId = data.actorId;
-        this.author = new user_1.PartialUser(data.actorId, rest);
+        this.author = resolved.author;
+        this.channel = resolved.channel;
         this.createdAt = data.createdAt;
-        this.updatedAt = data.updatedAt;
+        this.editedAt = data.updatedAt;
+        this.inReplyTo = data.inReplyTo;
+        this.threadRootEventId = data.threadRootEventId;
     }
-    async edit(builder) {
-        const input = builder.buildUpdate(this.roomId, this.id);
-        const res = await this.rest.post('chatto.api.v1.MessageService', 'UpdateMessage', { roomId: input.roomId, eventId: input.eventId, body: input.body, alsoSendToChannel: input.alsoSendToChannel }, message_1.MessageResponseSchema);
-        return new Message(res.message, this.rest);
+    async edit(payload) {
+        const input = (0, payload_1.resolveMessagePayload)(payload).buildUpdate(this.channelId, this.id);
+        const res = await this.ctx.rest.post('chatto.api.v1.MessageService', 'UpdateMessage', { roomId: input.roomId, eventId: input.eventId, body: input.body, alsoSendToChannel: input.alsoSendToChannel }, message_1.MessageResponseSchema);
+        return this.ctx.hydrateMessage(res.message);
     }
     async delete() {
-        await this.rest.post('chatto.api.v1.MessageService', 'DeleteMessage', { roomId: this.roomId, eventId: this.id }, message_1.DeleteMessageResponseSchema);
+        await this.ctx.rest.post('chatto.api.v1.MessageService', 'DeleteMessage', { roomId: this.channelId, eventId: this.id }, message_1.DeleteMessageResponseSchema);
     }
     async react(emoji) {
-        await this.rest.post('chatto.api.v1.MessageService', 'AddReaction', { roomId: this.roomId, messageEventId: this.id, emoji }, message_1.AddReactionResponseSchema);
+        await this.ctx.rest.post('chatto.api.v1.MessageService', 'AddReaction', { roomId: this.channelId, messageEventId: this.id, emoji }, message_1.AddReactionResponseSchema);
     }
     async removeReaction(emoji) {
-        await this.rest.post('chatto.api.v1.MessageService', 'RemoveReaction', { roomId: this.roomId, messageEventId: this.id, emoji }, message_1.RemoveReactionResponseSchema);
+        await this.ctx.rest.post('chatto.api.v1.MessageService', 'RemoveReaction', { roomId: this.channelId, messageEventId: this.id, emoji }, message_1.RemoveReactionResponseSchema);
+    }
+    async reply(payload) {
+        const builder = (0, payload_1.resolveMessagePayload)(payload).clone();
+        builder.setReplyTo(this.id);
+        builder.setThreadRoot(this.threadRootEventId ?? this.id);
+        const input = builder.buildCreate(this.channelId);
+        const res = await this.ctx.rest.post('chatto.api.v1.MessageService', 'CreateMessage', {
+            roomId: input.roomId,
+            body: input.body,
+            inReplyTo: input.inReplyTo,
+            threadRootEventId: input.threadRootEventId,
+            alsoSendToChannel: input.alsoSendToChannel,
+        }, message_1.MessageResponseSchema);
+        return this.ctx.hydrateMessage(res.message);
     }
 }
 exports.Message = Message;

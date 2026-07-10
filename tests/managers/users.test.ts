@@ -22,7 +22,7 @@ describe('UserManager', () => {
   describe('.fetch()', () => {
     it('calls GetUser and returns a User', async () => {
       const rest = makeRestMock({ user: validMember })
-      const manager = new UserManager(rest as any)
+      const manager = new UserManager({ rest } as any)
       const user = await manager.fetch('user_1')
       expect(rest.post).toHaveBeenCalledWith(
         'chatto.api.v1.UserService',
@@ -40,7 +40,7 @@ describe('UserManager', () => {
     it('calls BatchGetUsers and returns User[]', async () => {
       const member2 = { ...validMember, user: { ...validMember.user, id: 'user_2', login: '46sx' } }
       const rest = makeRestMock({ users: [validMember, member2] })
-      const manager = new UserManager(rest as any)
+      const manager = new UserManager({ rest } as any)
       const users = await manager.batchFetch(['user_1', 'user_2'])
       expect(rest.post).toHaveBeenCalledWith(
         'chatto.api.v1.UserService',
@@ -57,7 +57,7 @@ describe('UserManager', () => {
   describe('.list()', () => {
     it('calls ListUsers with no search and returns User[]', async () => {
       const rest = makeRestMock({ users: [validMember] })
-      const manager = new UserManager(rest as any)
+      const manager = new UserManager({ rest } as any)
       const users = await manager.list()
       expect(rest.post).toHaveBeenCalledWith(
         'chatto.api.v1.UserService',
@@ -71,7 +71,7 @@ describe('UserManager', () => {
 
     it('passes search term when provided', async () => {
       const rest = makeRestMock({ users: [validMember] })
-      const manager = new UserManager(rest as any)
+      const manager = new UserManager({ rest } as any)
       await manager.list({ search: 'ceraia' })
       expect(rest.post).toHaveBeenCalledWith(
         'chatto.api.v1.UserService',
