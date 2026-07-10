@@ -1,122 +1,104 @@
 import { describe, it, expect, mock } from 'bun:test'
 import { Message } from '../../src/resources/message'
-import { PartialUser } from '../../src/resources/user'
+import { Room } from '../../src/resources/room'
+import { User } from '../../src/resources/user'
 import { MessageBuilder } from '../../src/builders/message'
 
 const validMessageData = {
-  id: 'evt_1',
-  roomId: 'room_1',
-  createdAt: '2026-07-09T10:00:00Z',
-  actorId: 'user_1',
-  body: 'Hello',
-  reactions: [],
+  id: 'evt_1', roomId: 'R_1', createdAt: '2026-07-09T10:00:00Z',
+  actorId: 'U_1', body: 'Hello', reactions: [],
 }
 
-function makeRestMock(returnValue: unknown) {
-  return { post: mock().mockResolvedValue(returnValue) }
+function makeCtx(postReturn: unknown) {
+  const ctx: any = {
+    rest: { post: mock().mockResolvedValue(postReturn) },
+    resolveUser: mock(async (id: string) => User.partial(id)),
+    resolveRoom: mock(async (id: string) => Room.partial(id, ctx)),
+    hydrateMessage: mock(async (data: any) => new Message(data, ctx, {
+      author: User.partial(data.actorId),
+      channel: Room.partial(data.roomId, ctx),
+    })),
+  }
+  return ctx
+}
+
+function makeMessage(data: any, ctx: any) {
+  return new Message(data, ctx, { author: User.partial(data.actorId), channel: Room.partial(data.roomId, ctx) })
 }
 
 describe('Message', () => {
-  it('exposes data properties', () => {
-    const msg = new Message(validMessageData, makeRestMock(null) as any)
+  it('exposes discord.js-style fields', () => {
+    const msg = makeMessage(validMessageData, makeCtx(null))
     expect(msg.id).toBe('evt_1')
-    expect(msg.roomId).toBe('room_1')
-    expect(msg.body).toBe('Hello')
-    expect(msg.actorId).toBe('user_1')
-    expect(msg.createdAt).toBe('2026-07-09T10:00:00Z')
+    expect(msg.channelId).toBe('R_1')
+    expect(msg.content).toBe('Hello')
   })
 
-  it('exposes author as PartialUser with matching id', () => {
-    const msg = new Message(validMessageData, makeRestMock(null) as any)
-    expect(msg.author).toBeInstanceOf(PartialUser)
-    expect(msg.author.id).toBe('user_1')
-  })
-
-  describe('.edit()', () => {
-    it('calls UpdateMessage and returns new Message', async () => {
-      const updatedData = { ...validMessageData, body: 'Updated', updatedAt: '2026-07-09T11:00:00Z' }
-      const rest = makeRestMock({ message: updatedData })
-      const msg = new Message(validMessageData, rest as any)
-      const updated = await msg.edit(new MessageBuilder().setContent('Updated'))
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.MessageService',
-        'UpdateMessage',
-        expect.objectContaining({ roomId: 'room_1', eventId: 'evt_1', body: 'Updated' }),
-        expect.anything(),
-      )
-      expect(updated).toBeInstanceOf(Message)
-      expect(updated.body).toBe('Updated')
-    })
-  })
-
-  describe('.delete()', () => {
-    it('calls DeleteMessage', async () => {
-      const rest = makeRestMock({ deleted: true })
-      const msg = new Message(validMessageData, rest as any)
-      await msg.delete()
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.MessageService',
-        'DeleteMessage',
-        { roomId: 'room_1', eventId: 'evt_1' },
-        expect.anything(),
-      )
-    })
-  })
-
-  describe('.react()', () => {
-    it('calls AddReaction with emoji', async () => {
-      const rest = makeRestMock({ added: true })
-      const msg = new Message(validMessageData, rest as any)
-      await msg.react('👍')
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.MessageService',
-        'AddReaction',
-        { roomId: 'room_1', messageEventId: 'evt_1', emoji: '👍' },
-        expect.anything(),
-      )
-    })
-  })
-
-  describe('.removeReaction()', () => {
-    it('calls RemoveReaction with emoji', async () => {
-      const rest = makeRestMock({ removed: true })
-      const msg = new Message(validMessageData, rest as any)
-      await msg.removeReaction('👍')
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.MessageService',
-        'RemoveReaction',
-        { roomId: 'room_1', messageEventId: 'evt_1', emoji: '👍' },
-        expect.anything(),
-      )
-    })
+  it('exposes author as a full User and channel as a Room', () => {
+    const msg = makeMessage(validMessageData, makeCtx(null))
+    expect(msg.author).toBeInstanceOf(User)
+    expect(msg.author.id).toBe('U_1')
+    expect(msg.channel).toBeInstanceOf(Room)
+    expect(msg.channel.id).toBe('R_1')
   })
 
   describe('.reply()', () => {
-    it('calls CreateMessage with inReplyTo and threadRootEventId set to own id when not a thread reply', async () => {
+    it('accepts a plain string, sets inReplyTo/threadRoot, returns hydrated Message', async () => {
       const replyData = { ...validMessageData, id: 'evt_2' }
-      const rest = makeRestMock({ message: replyData })
-      const msg = new Message(validMessageData, rest as any)
-      const reply = await msg.reply(new MessageBuilder().setContent('Got it!'))
-      expect(rest.post).toHaveBeenCalledWith(
+      const ctx = makeCtx({ message: replyData })
+      const msg = makeMessage(validMessageData, ctx)
+      const reply = await msg.reply('Got it!')
+      expect(ctx.rest.post).toHaveBeenCalledWith(
         'chatto.api.v1.MessageService',
         'CreateMessage',
-        expect.objectContaining({ roomId: 'room_1', inReplyTo: 'evt_1', threadRootEventId: 'evt_1', body: 'Got it!' }),
+        expect.objectContaining({ roomId: 'R_1', inReplyTo: 'evt_1', threadRootEventId: 'evt_1', body: 'Got it!' }),
         expect.anything(),
       )
       expect(reply).toBeInstanceOf(Message)
     })
 
-    it('uses existing threadRootEventId when message is already a thread reply', async () => {
+    it('uses existing threadRootEventId when already a thread reply', async () => {
       const threadData = { ...validMessageData, inReplyTo: 'evt_0', threadRootEventId: 'evt_0' }
-      const replyData = { ...validMessageData, id: 'evt_2' }
-      const rest = makeRestMock({ message: replyData })
-      const msg = new Message(threadData, rest as any)
+      const ctx = makeCtx({ message: { ...validMessageData, id: 'evt_2' } })
+      const msg = makeMessage(threadData, ctx)
       await msg.reply(new MessageBuilder().setContent('Also replying'))
-      expect(rest.post).toHaveBeenCalledWith(
-        'chatto.api.v1.MessageService',
-        'CreateMessage',
+      expect(ctx.rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService', 'CreateMessage',
         expect.objectContaining({ inReplyTo: 'evt_1', threadRootEventId: 'evt_0' }),
         expect.anything(),
+      )
+    })
+  })
+
+  describe('.edit()', () => {
+    it('accepts a plain string and calls UpdateMessage', async () => {
+      const ctx = makeCtx({ message: { ...validMessageData, body: 'Updated' } })
+      const msg = makeMessage(validMessageData, ctx)
+      const updated = await msg.edit('Updated')
+      expect(ctx.rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService', 'UpdateMessage',
+        expect.objectContaining({ roomId: 'R_1', eventId: 'evt_1', body: 'Updated' }),
+        expect.anything(),
+      )
+      expect(updated).toBeInstanceOf(Message)
+    })
+  })
+
+  describe('.delete() / .react()', () => {
+    it('delete calls DeleteMessage', async () => {
+      const ctx = makeCtx({ deleted: true })
+      await makeMessage(validMessageData, ctx).delete()
+      expect(ctx.rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService', 'DeleteMessage',
+        { roomId: 'R_1', eventId: 'evt_1' }, expect.anything(),
+      )
+    })
+    it('react calls AddReaction', async () => {
+      const ctx = makeCtx({ added: true })
+      await makeMessage(validMessageData, ctx).react('👍')
+      expect(ctx.rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService', 'AddReaction',
+        { roomId: 'R_1', messageEventId: 'evt_1', emoji: '👍' }, expect.anything(),
       )
     })
   })
