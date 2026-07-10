@@ -1,9 +1,10 @@
 import type { RoomData } from '../types'
-import type { RestClient } from '../rest/client'
-import type { MessageBuilder } from '../builders/message'
+import type { ClientContext } from '../context'
+import type { Message } from './message'
+import type { MessagePayload } from '../builders/payload'
+import { resolveMessagePayload } from '../builders/payload'
 import { MessageResponseSchema } from '../schemas/message'
 import { GetRoomEventsResponseSchema } from '../schemas/room'
-import { Message } from './message'
 
 export class Room {
   readonly id: string
@@ -12,7 +13,7 @@ export class Room {
   readonly kind: string
   readonly archived: boolean
 
-  constructor(data: RoomData, private readonly rest: RestClient) {
+  constructor(data: RoomData, private readonly ctx: ClientContext) {
     this.id = data.id
     this.name = data.name
     this.description = data.description
@@ -20,9 +21,13 @@ export class Room {
     this.archived = data.archived
   }
 
-  async send(builder: MessageBuilder): Promise<Message> {
-    const input = builder.buildCreate(this.id)
-    const res = await this.rest.post(
+  static partial(id: string, ctx: ClientContext): Room {
+    return new Room({ id, name: id, kind: '', archived: false } as RoomData, ctx)
+  }
+
+  async send(payload: MessagePayload): Promise<Message> {
+    const input = resolveMessagePayload(payload).buildCreate(this.id)
+    const res = await this.ctx.rest.post(
       'chatto.api.v1.MessageService',
       'CreateMessage',
       {
@@ -34,11 +39,11 @@ export class Room {
       },
       MessageResponseSchema,
     )
-    return new Message(res.message, this.rest)
+    return this.ctx.hydrateMessage(res.message)
   }
 
   async fetchHistory(opts: { limit?: number; before?: string } = {}): Promise<Message[]> {
-    const res = await this.rest.post(
+    const res = await this.ctx.rest.post(
       'chatto.api.v1.RoomService',
       'GetRoomEvents',
       {
@@ -48,8 +53,10 @@ export class Room {
       },
       GetRoomEventsResponseSchema,
     )
-    return res.page.events
-      .filter(e => e.messagePosted != null)
-      .map(e => new Message(e.messagePosted!.message, this.rest))
+    return Promise.all(
+      res.page.events
+        .filter(e => e.messagePosted != null)
+        .map(e => this.ctx.hydrateMessage(e.messagePosted!.message)),
+    )
   }
 }
