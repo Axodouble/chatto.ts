@@ -4,12 +4,7 @@ import type { User } from './user'
 import type { Room } from './room'
 import type { MessagePayload } from '../builders/payload'
 import { resolveMessagePayload } from '../builders/payload'
-import {
-  MessageResponseSchema,
-  DeleteMessageResponseSchema,
-  AddReactionResponseSchema,
-  RemoveReactionResponseSchema,
-} from '../schemas/message'
+import { mapMessage } from '../rest/mappers'
 
 export class Message {
   readonly id: string
@@ -42,40 +37,22 @@ export class Message {
 
   async edit(payload: MessagePayload): Promise<Message> {
     const input = resolveMessagePayload(payload).buildUpdate(this.channelId, this.id)
-    const res = await this.ctx.rest.post(
-      'chatto.api.v1.MessageService',
-      'UpdateMessage',
-      { roomId: input.roomId, eventId: input.eventId, body: input.body, alsoSendToChannel: input.alsoSendToChannel },
-      MessageResponseSchema,
-    )
-    return this.ctx.hydrateMessage(res.message)
+    const res = await this.ctx.clients.message.updateMessage({
+      roomId: input.roomId, eventId: input.eventId, body: input.body, alsoSendToChannel: input.alsoSendToChannel,
+    })
+    return this.ctx.hydrateMessage(mapMessage(res.message!))
   }
 
   async delete(): Promise<void> {
-    await this.ctx.rest.post(
-      'chatto.api.v1.MessageService',
-      'DeleteMessage',
-      { roomId: this.channelId, eventId: this.id },
-      DeleteMessageResponseSchema,
-    )
+    await this.ctx.clients.message.deleteMessage({ roomId: this.channelId, eventId: this.id })
   }
 
   async react(emoji: string): Promise<void> {
-    await this.ctx.rest.post(
-      'chatto.api.v1.MessageService',
-      'AddReaction',
-      { roomId: this.channelId, messageEventId: this.id, emoji },
-      AddReactionResponseSchema,
-    )
+    await this.ctx.clients.message.addReaction({ roomId: this.channelId, messageEventId: this.id, emoji })
   }
 
   async removeReaction(emoji: string): Promise<void> {
-    await this.ctx.rest.post(
-      'chatto.api.v1.MessageService',
-      'RemoveReaction',
-      { roomId: this.channelId, messageEventId: this.id, emoji },
-      RemoveReactionResponseSchema,
-    )
+    await this.ctx.clients.message.removeReaction({ roomId: this.channelId, messageEventId: this.id, emoji })
   }
 
   async reply(payload: MessagePayload): Promise<Message> {
@@ -83,18 +60,10 @@ export class Message {
     builder.setReplyTo(this.id)
     builder.setThreadRoot(this.threadRootEventId ?? this.id)
     const input = builder.buildCreate(this.channelId)
-    const res = await this.ctx.rest.post(
-      'chatto.api.v1.MessageService',
-      'CreateMessage',
-      {
-        roomId: input.roomId,
-        body: input.body,
-        inReplyTo: input.inReplyTo,
-        threadRootEventId: input.threadRootEventId,
-        alsoSendToChannel: input.alsoSendToChannel,
-      },
-      MessageResponseSchema,
-    )
-    return this.ctx.hydrateMessage(res.message)
+    const res = await this.ctx.clients.message.createMessage({
+      roomId: input.roomId, body: input.body, inReplyTo: input.inReplyTo,
+      threadRootEventId: input.threadRootEventId, alsoSendToChannel: input.alsoSendToChannel,
+    })
+    return this.ctx.hydrateMessage(mapMessage(res.message!))
   }
 }

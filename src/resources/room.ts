@@ -3,8 +3,7 @@ import type { ClientContext } from '../context'
 import type { Message } from './message'
 import type { MessagePayload } from '../builders/payload'
 import { resolveMessagePayload } from '../builders/payload'
-import { MessageResponseSchema } from '../schemas/message'
-import { GetRoomEventsResponseSchema } from '../schemas/room'
+import { mapMessage } from '../rest/mappers'
 
 export class Room {
   readonly id: string
@@ -27,36 +26,25 @@ export class Room {
 
   async send(payload: MessagePayload): Promise<Message> {
     const input = resolveMessagePayload(payload).buildCreate(this.id)
-    const res = await this.ctx.rest.post(
-      'chatto.api.v1.MessageService',
-      'CreateMessage',
-      {
-        roomId: input.roomId,
-        body: input.body,
-        inReplyTo: input.inReplyTo,
-        threadRootEventId: input.threadRootEventId,
-        alsoSendToChannel: input.alsoSendToChannel,
-      },
-      MessageResponseSchema,
-    )
-    return this.ctx.hydrateMessage(res.message)
+    const res = await this.ctx.clients.message.createMessage({
+      roomId: input.roomId, body: input.body, inReplyTo: input.inReplyTo,
+      threadRootEventId: input.threadRootEventId, alsoSendToChannel: input.alsoSendToChannel,
+    })
+    return this.ctx.hydrateMessage(mapMessage(res.message!))
   }
 
   async fetchHistory(opts: { limit?: number; before?: string } = {}): Promise<Message[]> {
-    const res = await this.ctx.rest.post(
-      'chatto.api.v1.RoomService',
-      'GetRoomEvents',
-      {
-        roomId: this.id,
-        limit: opts.limit,
-        cursor: opts.before != null ? { before: opts.before } : undefined,
-      },
-      GetRoomEventsResponseSchema,
-    )
-    return Promise.all(
-      res.page.events
-        .filter(e => e.messagePosted != null)
-        .map(e => this.ctx.hydrateMessage(e.messagePosted!.message)),
-    )
+    const res = await this.ctx.clients.room.getRoomEvents({
+      roomId: this.id,
+      limit: opts.limit,
+      // GetRoomEventsRequest.cursor is a oneof over scalar fields (before/after);
+      // the generated init shape keeps the runtime `{ case, value }` ADT shape.
+      cursor: opts.before != null ? { case: 'before', value: opts.before } : undefined,
+    })
+    const events = res.page?.events ?? []
+    const postedMessages = events
+      .map(e => (e.event.case === 'messagePosted' ? e.event.value.message : undefined))
+      .filter((m): m is NonNullable<typeof m> => m != null)
+    return Promise.all(postedMessages.map(m => this.ctx.hydrateMessage(mapMessage(m))))
   }
 }

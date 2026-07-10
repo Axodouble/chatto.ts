@@ -75,20 +75,22 @@ describe('ChattoClient', () => {
 
   it('emits a hydrated Message with author and channel on messageCreate', async () => {
     const mockRt = makeMockRt()
-    // rest.post is used by messages.fetch (GetMessage), then GetUser, then GetRoom
     const client = new ChattoClient(
       { baseUrl: 'https://chat.example.com', token: 'tk' },
       () => mockRt as unknown as RealtimeConnection,
     )
-    // Stub the context's rest via the messages manager path:
-    const msgData = { id: 'evt_1', roomId: 'R_1', createdAt: 't', actorId: 'U_1', body: 'hi', reactions: [] }
-    const userMember = { user: { id: 'U_1', login: 'l', displayName: 'Name', deleted: false, presenceStatus: 'PRESENCE_STATUS_ONLINE' }, roles: [] }
-    const roomWrap = { room: { id: 'R_1', name: 'general', kind: 'channel', archived: false, universal: false } }
-    ;(client as any).ctx.rest.post = mock(async (_s: string, method: string) => {
-      if (method === 'GetMessage') return { message: msgData }
-      if (method === 'GetUser') return { user: userMember }
-      if (method === 'GetRoom') return { room: roomWrap }
-    })
+    // Stub the context's generated clients via the messages manager path:
+    // proto-shaped payloads (camelCase, numeric enums) as returned by the real clients.
+    const msgData = {
+      id: 'evt_1', roomId: 'R_1', createdAt: { seconds: 0n, nanos: 0 }, actorId: 'U_1', body: 'hi',
+      updatedAt: undefined, inReplyTo: '', threadRootEventId: '', reactions: [],
+    }
+    const userMember = { user: { id: 'U_1', login: 'l', displayName: 'Name', deleted: false, presenceStatus: 1, avatarUrl: undefined }, roles: [] }
+    const protoRoom = { id: 'R_1', name: 'general', kind: 1, description: '', archived: false, groupId: '', universal: false }
+    const ctx = (client as any).ctx
+    ctx.clients.message.getMessage = mock(async () => ({ message: msgData }))
+    ctx.clients.user.getUser = mock(async () => ({ user: userMember }))
+    ctx.clients.roomDirectory.getRoom = mock(async () => ({ room: { room: protoRoom } }))
     const received: any[] = []
     client.on('messageCreate', m => received.push(m))
     // Real frame shape per src/realtime/frames.ts + src/realtime/events.ts:
