@@ -4,7 +4,7 @@
 [![npm downloads](https://img.shields.io/npm/dm/chatto.ts&color=cb3837)](https://www.npmjs.com/package/chatto.ts)
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178c6&logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
-[![Publish to npm](https://github.com/Axodouble/Chatto.TS/actions/workflows/publish.yml/badge.svg)](https://github.com/Axodouble/Chatto.TS/actions/workflows/publish.yml)
+[![Publish to npm](https://github.com/axodouble/chatto.ts/actions/workflows/publish.yml/badge.svg)](https://github.com/axodouble/chatto.ts/actions/workflows/publish.yml)
 
 A Chatto Typescript library to interface with a Chatto instance.
 Tested against v0.4.3 of Chatto.

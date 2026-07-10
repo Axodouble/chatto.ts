@@ -4,11 +4,11 @@
   "description": "Discord.js-like TypeScript SDK for Chatto",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Axodouble/Chatto.TS.git"
+    "url": "git+https://github.com/Axodouble/chatto.ts.git"
   },
-  "homepage": "https://github.com/Axodouble/Chatto.TS#readme",
+  "homepage": "https://github.com/Axodouble/chatto.ts#readme",
   "bugs": {
-    "url": "https://github.com/Axodouble/Chatto.TS/issues"
+    "url": "https://github.com/Axodouble/chatto.ts/issues"
   },
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
