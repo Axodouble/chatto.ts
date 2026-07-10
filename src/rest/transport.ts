@@ -8,12 +8,11 @@ import { RoomService } from '../gen/chatto/api/v1/rooms_pb'
 import { ChattoApiError } from '../errors'
 
 // ConnectError.code is a numeric enum; Code[code] yields the PascalCase name.
-// The SDK's historical contract used lower-case Connect status strings
-// (e.g. "unauthenticated"), so normalize to that.
+// Connect wire status names are snake_case (e.g. "not_found",
+// "permission_denied"), so normalize to that.
 export function toChattoError(err: unknown): ChattoApiError {
   if (err instanceof ConnectError) {
-    const codeName = ConnectError.from(err).code // numeric
-    const name = codeNameOf(codeName)
+    const name = codeNameOf(err.code)
     return new ChattoApiError(name, err.rawMessage, { code: name, message: err.rawMessage })
   }
   const message = err instanceof Error ? err.message : String(err)
@@ -22,9 +21,9 @@ export function toChattoError(err: unknown): ChattoApiError {
 
 function codeNameOf(code: number): string {
   // @connectrpc/connect exports `Code`; map the numeric value to the wire name.
-  // Wire names are the enum key lower-cased (e.g. Code.Unauthenticated -> "unauthenticated").
+  // Wire names are the enum key in snake_case (e.g. Code.PermissionDenied -> "permission_denied").
   const key = Code[code] as string | undefined
-  return key ? key.charAt(0).toLowerCase() + key.slice(1) : 'unknown'
+  return key ? key[0].toLowerCase() + key.slice(1).replace(/[A-Z]/g, c => '_' + c.toLowerCase()) : 'unknown'
 }
 
 function authInterceptor(token: string): Interceptor {
