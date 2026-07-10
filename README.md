@@ -15,6 +15,12 @@ The API will be built upon the documentation that lives at [docs.chatto.run](htt
 
 The documentation itself is bound to change.
 
+The request/response types are generated from Chatto's published protobuf definitions
+([`chattocorp/chatto`](https://github.com/chattocorp/chatto)) into `src/gen/` using
+[Connect-ES](https://connectrpc.com/docs/web/). The generated code is committed, so a normal
+`bun install` + build needs no extra tooling. When Chatto's API changes, re-vendor the protos
+under `proto/` and run `bun run generate` to refresh the clients.
+
 ## Usage
 
 You can install this easily as an NPM package, just by using either bun or npm to install it.
