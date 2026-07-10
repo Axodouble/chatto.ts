@@ -27,6 +27,7 @@ describe.if(hasCreds)('live integration', () => {
     const sent = await room.send('chatto.ts live test ✅')
     expect(sent.author.id).toBeString()
     expect(sent.author.displayName).toBeString()
+    expect(sent.author.login.toLowerCase()).toBe(login!.toLowerCase())
     expect(sent.channel.id).toBe(testRoom!)
     const reply = await sent.reply('reply via .reply()')
     expect(reply.inReplyTo).toBe(sent.id)
