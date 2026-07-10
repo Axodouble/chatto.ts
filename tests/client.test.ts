@@ -3,6 +3,7 @@ import { EventEmitter } from 'events'
 import { ChattoClient } from '../src/client'
 import { RoomManager } from '../src/managers/rooms'
 import { MessageManager } from '../src/managers/messages'
+import { UserManager } from '../src/managers/users'
 import type { RealtimeConnection } from '../src/realtime/connection'
 
 type MockRt = EventEmitter & {
@@ -65,5 +66,36 @@ describe('ChattoClient', () => {
     client.on('disconnect', () => disconnects.push(true))
     mockRt.emit('close', false, 0)
     expect(disconnects).toHaveLength(1)
+  })
+
+  it('exposes users manager', () => {
+    const client = makeClient(makeMockRt())
+    expect(client.users).toBeInstanceOf(UserManager)
+  })
+
+  it('emits a hydrated Message with author and channel on messageCreate', async () => {
+    const mockRt = makeMockRt()
+    // rest.post is used by messages.fetch (GetMessage), then GetUser, then GetRoom
+    const client = new ChattoClient(
+      { baseUrl: 'https://chat.example.com', token: 'tk' },
+      () => mockRt as unknown as RealtimeConnection,
+    )
+    // Stub the context's rest via the messages manager path:
+    const msgData = { id: 'evt_1', roomId: 'R_1', createdAt: 't', actorId: 'U_1', body: 'hi', reactions: [] }
+    const userMember = { user: { id: 'U_1', login: 'l', displayName: 'Name', deleted: false, presenceStatus: 'PRESENCE_STATUS_ONLINE' }, roles: [] }
+    const roomWrap = { room: { id: 'R_1', name: 'general', kind: 'channel', archived: false, universal: false } }
+    ;(client as any).ctx.rest.post = mock(async (_s: string, method: string) => {
+      if (method === 'GetMessage') return { message: msgData }
+      if (method === 'GetUser') return { user: userMember }
+      if (method === 'GetRoom') return { room: roomWrap }
+    })
+    const received: any[] = []
+    client.on('messageCreate', m => received.push(m))
+    // Real frame shape per src/realtime/frames.ts + src/realtime/events.ts:
+    // ServerFrame.event.message_posted = { room_id, message_event_id }
+    mockRt.emit('frame', { event: { id: 'e_1', created_at: 't', actor_id: 'U_1', message_posted: { room_id: 'R_1', message_event_id: 'evt_1' } } })
+    await new Promise(r => setTimeout(r, 10))
+    expect(received[0]?.author.displayName).toBe('Name')
+    expect(received[0]?.channel.name).toBe('general')
   })
 })
