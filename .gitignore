@@ -1,4 +1,4 @@
 node_modules
-chatto
+/chatto
 .env
 dist

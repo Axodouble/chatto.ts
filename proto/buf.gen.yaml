@@ -1,0 +1,11 @@
+version: v2
+clean: true
+inputs:
+  - directory: .
+  - module: buf.build/bufbuild/protovalidate
+plugins:
+  - local: protoc-gen-es
+    out: ../src/gen
+    opt:
+      - target=ts
+      - import_extension=none

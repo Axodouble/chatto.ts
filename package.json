@@ -26,14 +26,20 @@
     "build": "tsc",
     "test": "bun test",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "tsc"
+    "prepublishOnly": "tsc",
+    "generate": "buf generate"
   },
   "dependencies": {
+    "@bufbuild/protobuf": "^2.12.1",
+    "@connectrpc/connect": "^2.1.2",
+    "@connectrpc/connect-web": "^2.1.2",
     "protobufjs": "^8.7.0",
     "ws": "^8.21.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@bufbuild/buf": "^1.71.0",
+    "@bufbuild/protoc-gen-es": "^2.12.1",
     "@types/bun": "latest",
     "@types/ws": "^8.18.1",
     "typescript": "^7.0.2"
