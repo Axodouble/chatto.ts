@@ -7,6 +7,7 @@
 [![Publish to npm](https://github.com/Axodouble/Chatto.TS/actions/workflows/publish.yml/badge.svg)](https://github.com/Axodouble/Chatto.TS/actions/workflows/publish.yml)
 
 A Chatto Typescript library to interface with a Chatto instance.
+Tested against v0.4.3 of Chatto.
 
 ## API
 
