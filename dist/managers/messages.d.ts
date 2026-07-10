@@ -1,10 +1,10 @@
-import type { RestClient } from '../rest/client';
-import type { MessageBuilder } from '../builders/message';
-import { Message } from '../resources/message';
+import type { ClientContext } from '../context';
+import type { Message } from '../resources/message';
+import type { MessagePayload } from '../builders/payload';
 export declare class MessageManager {
-    private readonly rest;
-    constructor(rest: RestClient);
-    send(roomId: string, builder: MessageBuilder): Promise<Message>;
+    private readonly ctx;
+    constructor(ctx: ClientContext);
+    send(roomId: string, payload: MessagePayload): Promise<Message>;
     fetch(roomId: string, eventId: string): Promise<Message>;
 }
 //# sourceMappingURL=messages.d.ts.map

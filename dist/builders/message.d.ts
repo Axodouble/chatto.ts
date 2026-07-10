@@ -8,6 +8,7 @@ export declare class MessageBuilder {
     setReplyTo(eventId: string): this;
     setThreadRoot(eventId: string): this;
     setAlsoSendToChannel(value: boolean): this;
+    clone(): MessageBuilder;
     buildCreate(roomId: string): CreateMessageInput;
     buildUpdate(roomId: string, eventId: string): UpdateMessageInput;
 }

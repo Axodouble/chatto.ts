@@ -1,8 +1,8 @@
 import { EventEmitter } from 'events';
 import { RealtimeConnection } from './realtime/connection';
-import { RoomManager } from './managers/rooms';
-import { MessageManager } from './managers/messages';
-import { UserManager } from './managers/users';
+import type { RoomManager } from './managers/rooms';
+import type { MessageManager } from './managers/messages';
+import type { UserManager } from './managers/users';
 import type { Message } from './resources/message';
 import type { MessageDeleteEvent, ReactionEvent, ChattoClientOptions } from './types';
 interface ClientEventMap {
@@ -21,6 +21,7 @@ export declare class ChattoClient extends EventEmitter<ClientEventMap> {
     readonly users: UserManager;
     private readonly rest;
     private readonly realtime;
+    private readonly ctx;
     constructor(options: ChattoClientOptions, realtimeFactory?: (wsUrl: string, token: string) => RealtimeConnection);
     static login(options: {
         baseUrl: string;

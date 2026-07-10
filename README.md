@@ -48,3 +48,6 @@ git push && git push --tags
 
 I do not own nor claim any ownership of the Chatto name or brand. Chatto and similar branding is all owned by their respective owners.
 I do not have any affiliation with Chatto.
+
+
+- Note, most of this code is AI generated, this is because I am expecting most things to break as Chatto is still in active development. Once a first stable release is announced where breaking changes should not occur anymore I will be going over everything to reimplement and refactor the code.

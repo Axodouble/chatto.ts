@@ -1,8 +1,8 @@
-import type { RestClient } from '../rest/client';
+import type { ClientContext } from '../context';
 import { Room } from '../resources/room';
 export declare class RoomManager {
-    private readonly rest;
-    constructor(rest: RestClient);
+    private readonly ctx;
+    constructor(ctx: ClientContext);
     list(): Promise<Room[]>;
     fetch(roomId: string): Promise<Room>;
 }

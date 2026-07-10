@@ -23,6 +23,14 @@ class MessageBuilder {
         this._alsoSendToChannel = value;
         return this;
     }
+    clone() {
+        const copy = new MessageBuilder();
+        copy._content = this._content;
+        copy._replyTo = this._replyTo;
+        copy._threadRoot = this._threadRoot;
+        copy._alsoSendToChannel = this._alsoSendToChannel;
+        return copy;
+    }
     buildCreate(roomId) {
         return message_1.CreateMessageInputSchema.parse({
             roomId,

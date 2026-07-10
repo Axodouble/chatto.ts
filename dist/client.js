@@ -5,9 +5,7 @@ const events_1 = require("events");
 const client_1 = require("./rest/client");
 const connection_1 = require("./realtime/connection");
 const events_2 = require("./realtime/events");
-const rooms_1 = require("./managers/rooms");
-const messages_1 = require("./managers/messages");
-const users_1 = require("./managers/users");
+const context_1 = require("./context");
 const integrated_1 = require("./auth/integrated");
 class ChattoClient extends events_1.EventEmitter {
     rooms;
@@ -15,6 +13,7 @@ class ChattoClient extends events_1.EventEmitter {
     users;
     rest;
     realtime;
+    ctx;
     constructor(options, realtimeFactory) {
         super();
         const wsUrl = options.baseUrl.replace(/^https?/, m => (m === 'https' ? 'wss' : 'ws')) + '/api/realtime';
@@ -22,9 +21,10 @@ class ChattoClient extends events_1.EventEmitter {
         this.realtime = realtimeFactory
             ? realtimeFactory(wsUrl, options.token)
             : new connection_1.RealtimeConnection(wsUrl, options.token);
-        this.rooms = new rooms_1.RoomManager(this.rest);
-        this.messages = new messages_1.MessageManager(this.rest);
-        this.users = new users_1.UserManager(this.rest);
+        this.ctx = new context_1.ChattoContext(this.rest);
+        this.rooms = this.ctx.rooms;
+        this.messages = this.ctx.messages;
+        this.users = this.ctx.users;
         this.wireRealtime();
     }
     static async login(options) {
