@@ -36,12 +36,13 @@ jobs:
       - name: Setup Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          node-version: 24
           registry-url: "https://registry.npmjs.org"
 
-      # Trusted publishing (OIDC) requires npm >= 11.5.1; Node 20 ships npm 10.
+      # Trusted publishing (OIDC) requires npm >= 11.5.1. Pin to npm 11 so the
+      # engine stays compatible with the runner's Node (npm 12 needs Node >=22).
       - name: Upgrade npm
-        run: npm install -g npm@latest
+        run: npm install -g npm@11
 
       - name: Verify tag matches package.json version
         run: |
@@ -55,5 +56,14 @@ jobs:
       # No NODE_AUTH_TOKEN needed: npm authenticates via OIDC using the
       # trusted publisher configured for this package. Provenance is emitted
       # automatically under trusted publishing.
+      #
+      # Prerelease tags (e.g. v0.4.1-rc0) publish under the "next" dist-tag so
+      # they never become the default `npm install chatto.ts` version. Stable
+      # tags publish as "latest".
       - name: Publish
-        run: npm publish --access public
+        run: |
+          if [[ "$GITHUB_REF_NAME" == *-* ]]; then
+            npm publish --access public --tag next
+          else
+            npm publish --access public
+          fi
