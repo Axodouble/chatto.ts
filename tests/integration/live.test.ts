@@ -88,6 +88,26 @@ describe.if(hasCreds)('live integration', () => {
     expect(reply.inReplyTo).toBe(sent.id)
   }, 20000)
 
+  it.if(Boolean(testRoom))('reads a thread created via .reply() with threads.fetchHistory', async () => {
+    const client = await ChattoClient.login({ baseUrl: baseUrl!, login: login!, password: password! })
+    const room = await client.rooms.fetch(testRoom!)
+
+    // .reply() roots the thread at the message replied to, so `root.id` is the thread key.
+    const root = await room.send(`chatto.ts thread root ${Date.now()}`)
+    const first = await root.reply('first thread reply')
+    const second = await first.reply('second thread reply')
+    expect(first.threadRootEventId).toBe(root.id)
+    expect(second.threadRootEventId).toBe(root.id)
+
+    const history = await client.threads.fetchHistory(testRoom!, root.id)
+    const ids = history.map(m => m.id)
+    // Both replies must appear (whether or not the server also returns the root event).
+    expect(ids).toContain(first.id)
+    expect(ids).toContain(second.id)
+    // No duplicates — fetchHistory de-dupes by id across pages.
+    expect(new Set(ids).size).toBe(ids.length)
+  }, 20000)
+
   it.if(Boolean(testRoom))('round-trips every realtime event over a message lifecycle', async () => {
     const client = await ChattoClient.login({ baseUrl: baseUrl!, login: login!, password: password! })
     const errors: Error[] = []

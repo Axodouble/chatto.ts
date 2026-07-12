@@ -6,6 +6,7 @@ import { ChattoContext } from './context'
 import { loginWithPassword } from './auth/integrated'
 import type { RoomManager } from './managers/rooms'
 import type { MessageManager } from './managers/messages'
+import type { ThreadManager } from './managers/threads'
 import type { UserManager } from './managers/users'
 import type { Message } from './resources/message'
 import type { MessageDeleteEvent, ReactionEvent, ChattoClientOptions } from './types'
@@ -25,6 +26,7 @@ interface ClientEventMap {
 export class ChattoClient extends EventEmitter<ClientEventMap> {
   readonly rooms: RoomManager
   readonly messages: MessageManager
+  readonly threads: ThreadManager
   readonly users: UserManager
   private readonly rest: RestClient
   private readonly realtime: RealtimeConnection
@@ -43,6 +45,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
     this.ctx = new ChattoContext(this.rest)
     this.rooms = this.ctx.rooms
     this.messages = this.ctx.messages
+    this.threads = this.ctx.threads
     this.users = this.ctx.users
     this.wireRealtime()
   }

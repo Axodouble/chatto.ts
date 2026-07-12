@@ -6,6 +6,7 @@ import { Room } from './resources/room'
 import { UserManager } from './managers/users'
 import { RoomManager } from './managers/rooms'
 import { MessageManager } from './managers/messages'
+import { ThreadManager } from './managers/threads'
 import { UserCache, RoomCache } from './caches'
 
 export interface ClientContext {
@@ -20,6 +21,7 @@ export class ChattoContext implements ClientContext {
   readonly users: UserManager
   readonly rooms: RoomManager
   readonly messages: MessageManager
+  readonly threads: ThreadManager
   private readonly userCache: UserCache
   private readonly roomCache: RoomCache
 
@@ -28,6 +30,7 @@ export class ChattoContext implements ClientContext {
     this.users = new UserManager(this)
     this.rooms = new RoomManager(this)
     this.messages = new MessageManager(this)
+    this.threads = new ThreadManager(this)
     this.userCache = new UserCache(id => this.users.fetch(id))
     this.roomCache = new RoomCache(id => this.rooms.fetch(id))
   }
