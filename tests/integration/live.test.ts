@@ -88,6 +88,32 @@ describe.if(hasCreds)('live integration', () => {
     expect(reply.inReplyTo).toBe(sent.id)
   }, 20000)
 
+  it.if(Boolean(testRoom))('uploads a 256x256 image and attaches it to a message', async () => {
+    const client = await ChattoClient.login({ baseUrl: baseUrl!, login: login!, password: password! })
+    const bytes = await Bun.file(new URL('../fixtures/test-image-256.png', import.meta.url)).bytes()
+    const file = { data: bytes, filename: 'test-image-256.png', contentType: 'image/png' }
+
+    // Direct upload → asset round-trip.
+    const asset = await client.assets.upload(testRoom!, file)
+    expect(asset.id).toBeString()
+    expect(asset.isImage).toBe(true)
+    if (asset.size != null) expect(asset.size).toBe(bytes.length)
+    if (asset.width != null) expect(asset.width).toBe(256)
+    if (asset.height != null) expect(asset.height).toBe(256)
+
+    // Fetch the uploaded asset back with a freshly signed URL.
+    const fetched = await client.assets.fetch(testRoom!, asset.id)
+    expect(fetched.id).toBe(asset.id)
+    expect(fetched.url).toBeString()
+
+    // Send a message with the file — it should upload and attach automatically.
+    const room = await client.rooms.fetch(testRoom!)
+    const msg = await room.send({ content: 'chatto.ts image upload test 📷', files: [file] })
+    expect(msg.attachments).toHaveLength(1)
+    expect(msg.attachments[0]!.filename).toBe('test-image-256.png')
+    expect(msg.attachments[0]!.isImage).toBe(true)
+  }, 30000)
+
   it.if(Boolean(testRoom))('reads a thread created via .reply() with threads.fetchHistory', async () => {
     const client = await ChattoClient.login({ baseUrl: baseUrl!, login: login!, password: password! })
     const room = await client.rooms.fetch(testRoom!)

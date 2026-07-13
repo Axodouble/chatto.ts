@@ -1,4 +1,5 @@
 import { z } from 'zod'
+import { MessageAttachmentSchema } from './asset'
 
 export const MessageReactionSchema = z.object({
   emoji: z.string(),
@@ -17,6 +18,7 @@ export const MessageSchema = z.object({
   inReplyTo: z.string().optional(),
   threadRootEventId: z.string().optional(),
   reactions: z.array(MessageReactionSchema).default([]),
+  attachments: z.array(MessageAttachmentSchema).default([]),
 })
 
 export const CreateMessageInputSchema = z.object({
@@ -25,6 +27,7 @@ export const CreateMessageInputSchema = z.object({
   inReplyTo: z.string().optional(),
   threadRootEventId: z.string().optional(),
   alsoSendToChannel: z.boolean().optional(),
+  attachmentAssetIds: z.array(z.string()).optional(),
 })
 
 export const UpdateMessageInputSchema = z.object({
@@ -36,5 +39,6 @@ export const UpdateMessageInputSchema = z.object({
 
 export const MessageResponseSchema = z.object({ message: MessageSchema })
 export const DeleteMessageResponseSchema = z.object({ deleted: z.boolean() })
+export const DeleteAttachmentResponseSchema = z.object({ deleted: z.boolean() })
 export const AddReactionResponseSchema = z.object({ added: z.boolean() })
 export const RemoveReactionResponseSchema = z.object({ removed: z.boolean() })

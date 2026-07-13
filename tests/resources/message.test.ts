@@ -2,6 +2,7 @@ import { describe, it, expect, mock } from 'bun:test'
 import { Message } from '../../src/resources/message'
 import { Room } from '../../src/resources/room'
 import { User } from '../../src/resources/user'
+import { Attachment } from '../../src/resources/attachment'
 import { MessageBuilder } from '../../src/builders/message'
 
 const validMessageData = {
@@ -12,6 +13,7 @@ const validMessageData = {
 function makeCtx(postReturn: unknown) {
   const ctx: any = {
     rest: { post: mock().mockResolvedValue(postReturn) },
+    assets: { upload: mock(async () => ({ id: 'as_up_1' })) },
     resolveUser: mock(async (id: string) => User.partial(id)),
     resolveRoom: mock(async (id: string) => Room.partial(id, ctx)),
     hydrateMessage: mock(async (data: any) => new Message(data, ctx, {
@@ -40,6 +42,22 @@ describe('Message', () => {
     expect(msg.author.id).toBe('U_1')
     expect(msg.channel).toBeInstanceOf(Room)
     expect(msg.channel.id).toBe('R_1')
+  })
+
+  it('hydrates attachments as Attachment instances', () => {
+    const data = {
+      ...validMessageData,
+      attachments: [{ id: 'at_1', filename: 'p.png', contentType: 'image/png', width: 10, height: 10 }],
+    }
+    const msg = makeMessage(data, makeCtx(null))
+    expect(msg.attachments).toHaveLength(1)
+    expect(msg.attachments[0]).toBeInstanceOf(Attachment)
+    expect(msg.attachments[0]?.id).toBe('at_1')
+  })
+
+  it('defaults attachments to an empty array', () => {
+    const msg = makeMessage(validMessageData, makeCtx(null))
+    expect(msg.attachments).toEqual([])
   })
 
   describe('.reply()', () => {
@@ -76,6 +94,29 @@ describe('Message', () => {
       const builder = new MessageBuilder().setContent('x')
       await msg.reply(builder)
       expect(builder.buildCreate('R_1').inReplyTo).toBeUndefined()
+    })
+
+    it('uploads files and attaches them when replying', async () => {
+      const ctx = makeCtx({ message: { ...validMessageData, id: 'evt_2' } })
+      const msg = makeMessage(validMessageData, ctx)
+      await msg.reply({ content: 'here', files: [{ data: new Uint8Array([1]), filename: 'a.png', contentType: 'image/png' }] })
+      expect(ctx.assets.upload).toHaveBeenCalledWith('R_1', expect.objectContaining({ filename: 'a.png' }))
+      expect(ctx.rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService', 'CreateMessage',
+        expect.objectContaining({ attachmentAssetIds: ['as_up_1'], inReplyTo: 'evt_1' }),
+        expect.anything(),
+      )
+    })
+  })
+
+  describe('.deleteAttachment()', () => {
+    it('calls DeleteAttachment with the attachment id', async () => {
+      const ctx = makeCtx({ deleted: true })
+      await makeMessage(validMessageData, ctx).deleteAttachment('at_1')
+      expect(ctx.rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService', 'DeleteAttachment',
+        { roomId: 'R_1', eventId: 'evt_1', attachmentId: 'at_1' }, expect.anything(),
+      )
     })
   })
 

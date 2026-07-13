@@ -52,6 +52,42 @@ client.on('messageCreate', async message=>{
 client.connect()
 ```
 
+### Uploading images & media
+
+Attach files directly when sending or replying — they are uploaded to the room
+and attached automatically (at most 10 attachments per message):
+
+```typescript
+const bytes = await Bun.file("cat.png").bytes() // any Uint8Array / ArrayBuffer
+
+// Attach inline when sending
+await client.messages.send(roomId, {
+    content: "look at this",
+    files: [{ data: bytes, filename: "cat.png", contentType: "image/png" }],
+})
+
+// Or reply with a file
+client.on('messageCreate', async message => {
+    if (message.content === '/cat') {
+        await message.reply({ files: [{ data: bytes, filename: "cat.png", contentType: "image/png" }] })
+    }
+})
+```
+
+You can also upload once and reuse the asset id, or read attachments off a
+message:
+
+```typescript
+const asset = await client.assets.upload(roomId, { data: bytes, filename: "cat.png", contentType: "image/png" })
+await client.messages.send(roomId, { content: "reused", attachmentIds: [asset.id] })
+
+client.on('messageCreate', message => {
+    for (const attachment of message.attachments) {
+        console.log(attachment.filename, attachment.url) // signed URL, may expire
+    }
+})
+```
+
 I do not own nor claim any ownership of the Chatto name or brand. Chatto and similar branding is all owned by their respective owners.
 I do not have any affiliation with Chatto.
 

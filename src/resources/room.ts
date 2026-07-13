@@ -3,6 +3,7 @@ import type { ClientContext } from '../context'
 import type { Message } from './message'
 import type { MessagePayload } from '../builders/payload'
 import { resolveMessagePayload } from '../builders/payload'
+import { prepareCreateInput } from '../builders/create-input'
 import { MessageResponseSchema } from '../schemas/message'
 import { GetRoomEventsResponseSchema } from '../schemas/room'
 
@@ -26,13 +27,14 @@ export class Room {
   }
 
   async send(payload: MessagePayload): Promise<Message> {
-    const input = resolveMessagePayload(payload).buildCreate(this.id)
+    const input = await prepareCreateInput(this.ctx, this.id, resolveMessagePayload(payload))
     const res = await this.ctx.rest.post(
       'chatto.api.v1.MessageService',
       'CreateMessage',
       {
         roomId: input.roomId,
         body: input.body,
+        attachmentAssetIds: input.attachmentAssetIds,
         inReplyTo: input.inReplyTo,
         threadRootEventId: input.threadRootEventId,
         alsoSendToChannel: input.alsoSendToChannel,

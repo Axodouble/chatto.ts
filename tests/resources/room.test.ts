@@ -7,6 +7,7 @@ const roomData = { id: 'R_1', name: 'general', kind: 'channel', archived: false,
 function makeCtx(postReturn: unknown) {
   const ctx: any = {
     rest: { post: mock().mockResolvedValue(postReturn) },
+    assets: { upload: mock(async () => ({ id: 'as_up_1' })) },
     resolveUser: mock(async (id: string) => ({ id })),
     resolveRoom: mock(async (id: string) => Room.partial(id, ctx)),
     hydrateMessage: mock(async (data: any) => new Message(data, ctx, {
@@ -44,6 +45,21 @@ describe('Room', () => {
       )
       expect(ctx.hydrateMessage).toHaveBeenCalledWith(msgData)
       expect(sent).toBeInstanceOf(Message)
+    })
+
+    it('uploads pending files and attaches the resulting asset ids', async () => {
+      const msgData = { id: 'evt_1', roomId: 'R_1', createdAt: 't', actorId: 'U_1', body: 'hi', reactions: [] }
+      const ctx = makeCtx({ message: msgData })
+      const room = new Room(roomData as any, ctx)
+      const file = { data: new Uint8Array([1, 2, 3]), filename: 'a.png', contentType: 'image/png' }
+      await room.send({ content: 'hi', files: [file] })
+      expect(ctx.assets.upload).toHaveBeenCalledWith('R_1', file)
+      expect(ctx.rest.post).toHaveBeenCalledWith(
+        'chatto.api.v1.MessageService',
+        'CreateMessage',
+        expect.objectContaining({ attachmentAssetIds: ['as_up_1'] }),
+        expect.anything(),
+      )
     })
   })
 

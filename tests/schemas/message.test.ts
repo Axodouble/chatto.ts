@@ -36,6 +36,20 @@ describe('MessageSchema', () => {
     const msg = MessageSchema.parse(noReactions)
     expect(msg.reactions).toEqual([])
   })
+
+  it('defaults attachments to empty array when absent', () => {
+    const msg = MessageSchema.parse(validMessage)
+    expect(msg.attachments).toEqual([])
+  })
+
+  it('parses attachments when present', () => {
+    const msg = MessageSchema.parse({
+      ...validMessage,
+      attachments: [{ id: 'at_1', filename: 'p.png', contentType: 'image/png', width: 10, height: 10 }],
+    })
+    expect(msg.attachments).toHaveLength(1)
+    expect(msg.attachments[0]?.id).toBe('at_1')
+  })
 })
 
 describe('CreateMessageInputSchema', () => {
@@ -47,6 +61,11 @@ describe('CreateMessageInputSchema', () => {
     const input = CreateMessageInputSchema.parse({ roomId: 'room_1', body: 'Hi' })
     expect(input.roomId).toBe('room_1')
     expect(input.body).toBe('Hi')
+  })
+
+  it('parses attachmentAssetIds', () => {
+    const input = CreateMessageInputSchema.parse({ roomId: 'room_1', attachmentAssetIds: ['as_1', 'as_2'] })
+    expect(input.attachmentAssetIds).toEqual(['as_1', 'as_2'])
   })
 })
 

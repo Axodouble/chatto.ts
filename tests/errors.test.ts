@@ -1,4 +1,4 @@
-import { ChattoApiError, ChattoParseError } from '../src/errors'
+import { ChattoApiError, ChattoParseError, ChattoValidationError } from '../src/errors'
 
 describe('ChattoApiError', () => {
   it('sets code, message, rawResponse and is an Error', () => {
@@ -22,5 +22,15 @@ describe('ChattoParseError', () => {
     expect(err.issues).toBe(issues)
     expect(err.rawBody).toBe(raw)
     expect(err.message).toContain('Expected string')
+  })
+})
+
+describe('ChattoValidationError', () => {
+  it('sets code, message and is an Error', () => {
+    const err = new ChattoValidationError('too_many_attachments', 'At most 10 attachments allowed')
+    expect(err).toBeInstanceOf(Error)
+    expect(err.name).toBe('ChattoValidationError')
+    expect(err.code).toBe('too_many_attachments')
+    expect(err.message).toBe('At most 10 attachments allowed')
   })
 })
