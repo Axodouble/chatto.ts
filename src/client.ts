@@ -12,7 +12,7 @@ import type { Message } from './resources/message'
 import type { MessageDeleteEvent, ReactionEvent, ChattoClientOptions } from './types'
 import type { ServerFrame } from './realtime/frames'
 
-interface ClientEventMap {
+export interface ClientEventMap {
   ready: []
   messageCreate: [message: Message]
   messageUpdate: [message: Message]
