@@ -30,6 +30,45 @@ describe('MessageBuilder', () => {
     })
   })
 
+  describe('attachments', () => {
+    const file = { data: new Uint8Array([1, 2, 3]), filename: 'a.png', contentType: 'image/png' }
+
+    it('collects pending files via addFile/addFiles', () => {
+      const builder = new MessageBuilder().addFile(file).addFiles(file, file)
+      expect(builder.getFiles()).toHaveLength(3)
+    })
+
+    it('collects explicit attachment asset ids via addAttachment', () => {
+      const builder = new MessageBuilder().addAttachment('as_1').addAttachment('as_2')
+      expect(builder.getAttachmentIds()).toEqual(['as_1', 'as_2'])
+    })
+
+    it('addFile/addAttachment are chainable', () => {
+      const builder = new MessageBuilder()
+      expect(builder.addFile(file)).toBe(builder)
+      expect(builder.addAttachment('as_1')).toBe(builder)
+    })
+
+    it('buildCreate emits attachmentAssetIds from explicit ids', () => {
+      const input = new MessageBuilder().setContent('hi').addAttachment('as_1').buildCreate('room_1')
+      expect(input.attachmentAssetIds).toEqual(['as_1'])
+    })
+
+    it('clone copies pending files and attachment ids', () => {
+      const original = new MessageBuilder().addFile(file).addAttachment('as_1')
+      const copy = original.clone()
+      copy.addAttachment('as_2')
+      expect(original.getAttachmentIds()).toEqual(['as_1'])
+      expect(copy.getAttachmentIds()).toEqual(['as_1', 'as_2'])
+      expect(copy.getFiles()).toHaveLength(1)
+    })
+
+    it('builds create input with no content when only files are present', () => {
+      const input = new MessageBuilder().addFile(file).buildCreate('room_1')
+      expect(input.body).toBeUndefined()
+    })
+  })
+
   describe('buildUpdate', () => {
     it('builds update input with roomId and eventId', () => {
       const input = new MessageBuilder().setContent('Updated').buildUpdate('room_1', 'evt_1')

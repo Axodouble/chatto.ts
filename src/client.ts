@@ -8,6 +8,7 @@ import type { RoomManager } from './managers/rooms'
 import type { MessageManager } from './managers/messages'
 import type { ThreadManager } from './managers/threads'
 import type { UserManager } from './managers/users'
+import type { AssetManager } from './managers/assets'
 import type { ChattoClientOptions, ClientEventMap } from './types'
 import type { ServerFrame } from './realtime/frames'
 
@@ -17,6 +18,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   readonly messages: MessageManager
   readonly threads: ThreadManager
   readonly users: UserManager
+  readonly assets: AssetManager
   private readonly rest: RestClient
   private readonly realtime: RealtimeConnection
   private readonly ctx: ChattoContext
@@ -36,6 +38,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
     this.messages = this.ctx.messages
     this.threads = this.ctx.threads
     this.users = this.ctx.users
+    this.assets = this.ctx.assets
     this.wireRealtime()
   }
 

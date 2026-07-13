@@ -3,10 +3,13 @@ import type { ClientContext } from '../context'
 import type { User } from './user'
 import type { Room } from './room'
 import type { MessagePayload } from '../builders/payload'
+import { Attachment } from './attachment'
 import { resolveMessagePayload } from '../builders/payload'
+import { prepareCreateInput } from '../builders/create-input'
 import {
   MessageResponseSchema,
   DeleteMessageResponseSchema,
+  DeleteAttachmentResponseSchema,
   AddReactionResponseSchema,
   RemoveReactionResponseSchema,
 } from '../schemas/message'
@@ -22,6 +25,7 @@ export class Message {
   readonly editedAt: string | undefined
   readonly inReplyTo: string | undefined
   readonly threadRootEventId: string | undefined
+  readonly attachments: Attachment[]
 
   constructor(
     data: MessageData,
@@ -38,6 +42,7 @@ export class Message {
     this.editedAt = data.updatedAt
     this.inReplyTo = data.inReplyTo
     this.threadRootEventId = data.threadRootEventId
+    this.attachments = (data.attachments ?? []).map(a => new Attachment(a))
   }
 
   async edit(payload: MessagePayload): Promise<Message> {
@@ -82,13 +87,14 @@ export class Message {
     const builder = resolveMessagePayload(payload).clone()
     builder.setReplyTo(this.id)
     builder.setThreadRoot(this.threadRootEventId ?? this.id)
-    const input = builder.buildCreate(this.channelId)
+    const input = await prepareCreateInput(this.ctx, this.channelId, builder)
     const res = await this.ctx.rest.post(
       'chatto.api.v1.MessageService',
       'CreateMessage',
       {
         roomId: input.roomId,
         body: input.body,
+        attachmentAssetIds: input.attachmentAssetIds,
         inReplyTo: input.inReplyTo,
         threadRootEventId: input.threadRootEventId,
         alsoSendToChannel: input.alsoSendToChannel,
@@ -96,5 +102,14 @@ export class Message {
       MessageResponseSchema,
     )
     return this.ctx.hydrateMessage(res.message)
+  }
+
+  async deleteAttachment(attachmentId: string): Promise<void> {
+    await this.ctx.rest.post(
+      'chatto.api.v1.MessageService',
+      'DeleteAttachment',
+      { roomId: this.channelId, eventId: this.id, attachmentId },
+      DeleteAttachmentResponseSchema,
+    )
   }
 }
