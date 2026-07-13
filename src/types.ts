@@ -8,6 +8,7 @@ import type {
 import type { RoomSchema } from './schemas/room'
 import type { MessageDeleteEventSchema, ReactionEventSchema } from './schemas/realtime'
 import type { UserSchema, DirectoryMemberSchema } from './schemas/user'
+import { Message } from './resources/message'
 
 export type MessageData = z.infer<typeof MessageSchema>
 export type MessageReaction = z.infer<typeof MessageReactionSchema>
@@ -22,4 +23,14 @@ export type DirectoryMemberData = z.infer<typeof DirectoryMemberSchema>
 export interface ChattoClientOptions {
   baseUrl: string
   token: string
+}
+export interface ClientEventMap {
+  ready: []
+  messageCreate: [message: Message]
+  messageUpdate: [message: Message]
+  messageDelete: [event: MessageDeleteEvent]
+  reactionAdd: [event: ReactionEvent]
+  reactionRemove: [event: ReactionEvent]
+  error: [err: Error]
+  disconnect: []
 }

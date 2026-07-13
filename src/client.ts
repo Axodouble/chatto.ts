@@ -8,20 +8,9 @@ import type { RoomManager } from './managers/rooms'
 import type { MessageManager } from './managers/messages'
 import type { ThreadManager } from './managers/threads'
 import type { UserManager } from './managers/users'
-import type { Message } from './resources/message'
-import type { MessageDeleteEvent, ReactionEvent, ChattoClientOptions } from './types'
+import type { ChattoClientOptions, ClientEventMap } from './types'
 import type { ServerFrame } from './realtime/frames'
 
-export interface ClientEventMap {
-  ready: []
-  messageCreate: [message: Message]
-  messageUpdate: [message: Message]
-  messageDelete: [event: MessageDeleteEvent]
-  reactionAdd: [event: ReactionEvent]
-  reactionRemove: [event: ReactionEvent]
-  error: [err: Error]
-  disconnect: []
-}
 
 export class ChattoClient extends EventEmitter<ClientEventMap> {
   readonly rooms: RoomManager
