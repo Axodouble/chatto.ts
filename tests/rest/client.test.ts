@@ -17,7 +17,7 @@ function mockFetch(status: number, body: unknown) {
 afterEach(() => mock.restore())
 
 describe('RestClient.post', () => {
-  const client = new RestClient('https://chat.example.com', 'mytoken')
+  const client = new RestClient('https://chat.example.com', () => 'mytoken')
 
   it('sends POST to correct URL with correct headers', async () => {
     const spy = mockFetch(200, { id: 'abc' })
@@ -60,5 +60,35 @@ describe('RestClient.post', () => {
   it('throws ChattoParseError when response does not match schema', async () => {
     mockFetch(200, { id: 123 }) // id should be string
     await expect(client.post('svc', 'Method', {}, schema)).rejects.toThrow(ChattoParseError)
+  })
+
+  it('refreshes and retries once on 401 then succeeds', async () => {
+    let token = 'stale'
+    let call = 0
+    const spy = spyOn(globalThis, 'fetch').mockImplementation(async () => {
+      call += 1
+      if (call === 1) {
+        return { ok: false, status: 401, statusText: 'Unauthorized',
+          json: async () => ({ code: 'unauthenticated', message: 'expired' }) } as Response
+      }
+      return { ok: true, status: 200, statusText: 'OK', json: async () => ({ id: 'ok' }) } as Response
+    })
+    const onUnauthorized = mock(async () => { token = 'fresh' })
+    const c = new RestClient('https://chat.example.com', () => token, onUnauthorized)
+    const result = await c.post('svc', 'M', {}, schema)
+    expect(result.id).toBe('ok')
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
+    expect(spy).toHaveBeenCalledTimes(2)
+    // second call used the refreshed token
+    const secondOpts = spy.mock.calls[1]![1] as RequestInit
+    expect((secondOpts.headers as Record<string, string>)['Authorization']).toBe('Bearer fresh')
+  })
+
+  it('throws ChattoApiError when the retry also returns 401', async () => {
+    mockFetch(401, { code: 'unauthenticated', message: 'expired' })
+    const onUnauthorized = mock(async () => {})
+    const c = new RestClient('https://chat.example.com', () => 'tk', onUnauthorized)
+    await expect(c.post('svc', 'M', {}, schema)).rejects.toBeInstanceOf(ChattoApiError)
+    expect(onUnauthorized).toHaveBeenCalledTimes(1)
   })
 })

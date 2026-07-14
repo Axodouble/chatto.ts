@@ -4,7 +4,8 @@ import { ChattoApiError, ChattoParseError } from '../errors'
 export class RestClient {
   constructor(
     private readonly baseUrl: string,
-    private readonly token: string,
+    private readonly getToken: () => string,
+    private readonly onUnauthorized?: () => Promise<void>,
   ) {}
 
   async post<S extends ZodTypeAny>(
@@ -14,15 +15,24 @@ export class RestClient {
     schema: S,
   ): Promise<z.output<S>> {
     const url = `${this.baseUrl}/api/connect/${service}/${method}`
-    const res = await fetch(url, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Connect-Protocol-Version': '1',
-        Authorization: `Bearer ${this.token}`,
-      },
-      body: JSON.stringify(input),
-    })
+
+    const attempt = async (): Promise<Response> =>
+      fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Connect-Protocol-Version': '1',
+          Authorization: `Bearer ${this.getToken()}`,
+        },
+        body: JSON.stringify(input),
+      })
+
+    let res = await attempt()
+
+    if (this.isUnauthorized(res) && this.onUnauthorized != null) {
+      await this.onUnauthorized()
+      res = await attempt()
+    }
 
     if (!res.ok) {
       const body = await res.json().catch(() => ({})) as Record<string, unknown>
@@ -39,5 +49,9 @@ export class RestClient {
       throw new ChattoParseError(parsed.error.issues, body)
     }
     return parsed.data as z.output<S>
+  }
+
+  private isUnauthorized(res: Response): boolean {
+    return res.status === 401
   }
 }

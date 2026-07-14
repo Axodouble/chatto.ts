@@ -29,7 +29,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   ) {
     super()
     const wsUrl = options.baseUrl.replace(/^https?/, m => (m === 'https' ? 'wss' : 'ws')) + '/api/realtime'
-    this.rest = new RestClient(options.baseUrl, options.token)
+    this.rest = new RestClient(options.baseUrl, () => options.token)
     this.realtime = realtimeFactory
       ? realtimeFactory(wsUrl, options.token)
       : new RealtimeConnection(wsUrl, options.token)
