@@ -28,6 +28,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   private reconnecting = false
   private reconnectAttempt = 0
   private readonly reconnectOpts: Required<ReconnectOptions>
+  private refreshTimer: ReturnType<typeof setInterval> | null = null
 
   constructor(
     options: ChattoClientOptions,
@@ -57,6 +58,15 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
     this.assets = this.ctx.assets
     this.on('error', () => {})
     this.wireRealtime()
+
+    const intervalMs = options.refresh?.intervalMs
+    if (intervalMs != null && intervalMs > 0 && this.store.canRefresh()) {
+      this.refreshTimer = setInterval(() => {
+        this.store.refresh()
+          .then(() => this.emit('tokenRefresh'))
+          .catch(err => this.emit('error', err instanceof Error ? err : new Error(String(err))))
+      }, intervalMs)
+    }
   }
 
   static async login(options: { baseUrl: string; login: string; password: string }): Promise<ChattoClient> {
@@ -74,6 +84,10 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   }
 
   async disconnect(): Promise<void> {
+    if (this.refreshTimer != null) {
+      clearInterval(this.refreshTimer)
+      this.refreshTimer = null
+    }
     this.realtime.disconnect()
     this.emit('disconnect')
   }

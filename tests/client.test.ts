@@ -210,5 +210,35 @@ describe('ChattoClient', () => {
     expect(disconnects).toHaveLength(1)
   })
 
+  it('periodically re-logs-in when refresh.intervalMs is set', async () => {
+    const mockRt = makeMockRt()
+    const spy = spyOn(globalThis, 'fetch').mockResolvedValue(
+      { ok: true, status: 200, statusText: 'OK', json: async () => ({ success: true, token: 'rotated', user: { id: 'U1', login: 'u' } }) } as Response,
+    )
+    const client = new ChattoClient(
+      { baseUrl: 'https://c', token: 'tk', credentials: { login: 'u', password: 'p' }, refresh: { intervalMs: 5 } },
+      () => mockRt as unknown as RealtimeConnection,
+    )
+    const refreshed: unknown[] = []
+    client.on('tokenRefresh', () => refreshed.push(true))
+    await new Promise(r => setTimeout(r, 18))
+    await client.disconnect()
+    expect(spy.mock.calls.length).toBeGreaterThanOrEqual(2)
+    expect(refreshed.length).toBeGreaterThanOrEqual(2)
+  })
+
+  it('does not start a periodic timer without credentials', async () => {
+    const mockRt = makeMockRt()
+    const spy = spyOn(globalThis, 'fetch').mockResolvedValue({ ok: true, status: 200, statusText: 'OK', json: async () => ({}) } as Response)
+    const client = new ChattoClient(
+      { baseUrl: 'https://c', token: 'tk', refresh: { intervalMs: 5 } },
+      () => mockRt as unknown as RealtimeConnection,
+    )
+    await new Promise(r => setTimeout(r, 18))
+    await client.disconnect()
+    expect(spy).not.toHaveBeenCalled()
+    void client
+  })
+
   afterEach(() => mock.restore())
 })
