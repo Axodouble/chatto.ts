@@ -1,4 +1,4 @@
-import { describe, it, expect, mock } from 'bun:test'
+import { describe, it, expect, mock, spyOn, afterEach } from 'bun:test'
 import { EventEmitter } from 'events'
 import { ChattoClient } from '../src/client'
 import { RoomManager } from '../src/managers/rooms'
@@ -98,4 +98,41 @@ describe('ChattoClient', () => {
     expect(received[0]?.author.displayName).toBe('Name')
     expect(received[0]?.channel.name).toBe('general')
   })
+
+  it('does not throw when an error is emitted with no user listener', () => {
+    const mockRt = makeMockRt()
+    const client = makeClient(mockRt)
+    // no client.on('error', ...) attached
+    expect(() => mockRt.emit('error', new Error('boom'))).not.toThrow()
+    void client
+  })
+
+  it('refreshes the token and retries when REST returns 401', async () => {
+    const mockRt = makeMockRt()
+    // Branch on URL: /auth/login mints a fresh token; the Connect call 401s once
+    // (with the stale token) then succeeds (with the fresh token).
+    let connectCalls = 0
+    spyOn(globalThis, 'fetch').mockImplementation(async (url: string) => {
+      if (String(url).endsWith('/auth/login')) {
+        return { ok: true, status: 200, statusText: 'OK',
+          json: async () => ({ success: true, token: 'fresh', user: { id: 'U1', login: 'u' } }) } as Response
+      }
+      connectCalls += 1
+      if (connectCalls === 1) {
+        return { ok: false, status: 401, statusText: 'Unauthorized',
+          json: async () => ({ code: 'unauthenticated' }) } as Response
+      }
+      // GetRoom (RoomDirectoryService) response is double-nested: res.room.room
+      return { ok: true, status: 200, statusText: 'OK',
+        json: async () => ({ room: { room: { id: 'R1', name: 'General', kind: 'ROOM_KIND_CHANNEL', archived: false } } }) } as Response
+    })
+    const client = new ChattoClient(
+      { baseUrl: 'https://c', token: 'stale', credentials: { login: 'u', password: 'p' } },
+      () => mockRt as unknown as RealtimeConnection,
+    )
+    const room = await client.rooms.fetch('R1')
+    expect(room.id).toBe('R1')
+  })
+
+  afterEach(() => mock.restore())
 })
