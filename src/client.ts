@@ -4,6 +4,7 @@ import { RealtimeConnection, type CloseReason } from './realtime/connection'
 import { mapFrameToEvent } from './realtime/events'
 import { ChattoContext } from './context'
 import { loginWithPassword } from './auth/integrated'
+import { TokenStore } from './auth/token-store'
 import type { RoomManager } from './managers/rooms'
 import type { MessageManager } from './managers/messages'
 import type { ThreadManager } from './managers/threads'
@@ -22,29 +23,39 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   private readonly rest: RestClient
   private readonly realtime: RealtimeConnection
   private readonly ctx: ChattoContext
+  private readonly store: TokenStore
 
   constructor(
     options: ChattoClientOptions,
-    realtimeFactory?: (wsUrl: string, token: string) => RealtimeConnection,
+    realtimeFactory?: (wsUrl: string, getToken: () => string) => RealtimeConnection,
   ) {
     super()
     const wsUrl = options.baseUrl.replace(/^https?/, m => (m === 'https' ? 'wss' : 'ws')) + '/api/realtime'
-    this.rest = new RestClient(options.baseUrl, () => options.token)
+    this.store = new TokenStore(options.baseUrl, options.token, options.credentials)
+    const getToken = () => this.store.getToken()
+    this.rest = new RestClient(options.baseUrl, getToken, async () => {
+      await this.store.refresh()
+    })
     this.realtime = realtimeFactory
-      ? realtimeFactory(wsUrl, options.token)
-      : new RealtimeConnection(wsUrl, () => options.token)
+      ? realtimeFactory(wsUrl, getToken)
+      : new RealtimeConnection(wsUrl, getToken)
     this.ctx = new ChattoContext(this.rest)
     this.rooms = this.ctx.rooms
     this.messages = this.ctx.messages
     this.threads = this.ctx.threads
     this.users = this.ctx.users
     this.assets = this.ctx.assets
+    this.on('error', () => {})
     this.wireRealtime()
   }
 
   static async login(options: { baseUrl: string; login: string; password: string }): Promise<ChattoClient> {
     const { token } = await loginWithPassword(options.baseUrl, options.login, options.password)
-    return new ChattoClient({ baseUrl: options.baseUrl, token })
+    return new ChattoClient({
+      baseUrl: options.baseUrl,
+      token,
+      credentials: { login: options.login, password: options.password },
+    })
   }
 
   async connect(): Promise<void> {
