@@ -93,6 +93,7 @@ export class RealtimeConnection extends EventEmitter<RealtimeConnectionEvents> {
             code: 1000,
             retryAfterMs: frame.close.retry_after_ms,
           })
+          settle(() => reject(new Error(`realtime closed before subscribe: ${frame.close!.code}`)))
           return
         }
 
@@ -108,6 +109,7 @@ export class RealtimeConnection extends EventEmitter<RealtimeConnectionEvents> {
         this.cleanup()
         const kind = this.userClosed ? 'clean' : classifyCloseCode(code)
         this.emitClose({ kind, code, retryAfterMs: 0 })
+        settle(() => reject(new Error(`socket closed before subscribe (code ${code})`)))
       })
     })
   }

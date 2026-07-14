@@ -142,6 +142,20 @@ describe('RealtimeConnection', () => {
     expect(reasons[0].kind).toBe('clean')
   })
 
+  it('rejects connect() when the socket closes before subscribed', async () => {
+    const mockWs = new MockWs()
+    const conn = makeConn(mockWs)
+    const p = conn.connect()
+    setImmediate(() => {
+      mockWs.emit('open')
+      setImmediate(() => {
+        mockWs.emit('message', buildServerFrameBuffer({ hello: { heartbeat_interval_seconds: 60 } }))
+        setImmediate(() => mockWs.emit('close', 1013, Buffer.from('')))
+      })
+    })
+    await expect(p).rejects.toThrow()
+  })
+
   it('emits close only once when frame close precedes ws close', async () => {
     const mockWs = new MockWs()
     handshake(mockWs)

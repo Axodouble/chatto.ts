@@ -5,6 +5,7 @@ import { RoomManager } from '../src/managers/rooms'
 import { MessageManager } from '../src/managers/messages'
 import { UserManager } from '../src/managers/users'
 import type { RealtimeConnection } from '../src/realtime/connection'
+import { ChattoApiError, ChattoAuthError } from '../src/errors'
 
 type MockRt = EventEmitter & {
   connect: ReturnType<typeof mock>
@@ -238,6 +239,36 @@ describe('ChattoClient', () => {
     await client.disconnect()
     expect(spy).not.toHaveBeenCalled()
     void client
+  })
+
+  it('disconnect() cancels an in-flight reconnect and does not resurrect', async () => {
+    const mockRt = makeMockRt()
+    const client = new ChattoClient(
+      { baseUrl: 'https://c', token: 'tk', reconnect: { baseDelayMs: 20 } },
+      () => mockRt as unknown as RealtimeConnection,
+    )
+    const disconnects: unknown[] = []
+    client.on('disconnect', () => disconnects.push(true))
+    mockRt.emit('close', { kind: 'retry', code: 1006, retryAfterMs: 0 })
+    await client.disconnect()
+    await new Promise(r => setTimeout(r, 40))
+    expect(mockRt.connect).not.toHaveBeenCalled()
+    expect(disconnects).toHaveLength(1)
+  })
+
+  it('token-only client surfaces ChattoApiError (not ChattoAuthError) on REST 401', async () => {
+    const mockRt = makeMockRt()
+    spyOn(globalThis, 'fetch').mockResolvedValue(
+      { ok: false, status: 401, statusText: 'Unauthorized',
+        json: async () => ({ code: 'unauthenticated', message: 'expired' }) } as Response,
+    )
+    const client = new ChattoClient(
+      { baseUrl: 'https://c', token: 'tk' },
+      () => mockRt as unknown as RealtimeConnection,
+    )
+    const err = await client.rooms.fetch('R1').catch(e => e)
+    expect(err).toBeInstanceOf(ChattoApiError)
+    expect(err).not.toBeInstanceOf(ChattoAuthError)
   })
 
   afterEach(() => mock.restore())
