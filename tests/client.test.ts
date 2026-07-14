@@ -59,12 +59,12 @@ describe('ChattoClient', () => {
     expect(errors[0]?.message).toBe('ws error')
   })
 
-  it('emits disconnect when realtime emits close with reconnect=false', () => {
+  it('emits disconnect when realtime emits close with kind=clean', () => {
     const mockRt = makeMockRt()
     const client = makeClient(mockRt)
     const disconnects: unknown[] = []
     client.on('disconnect', () => disconnects.push(true))
-    mockRt.emit('close', false, 0)
+    mockRt.emit('close', { kind: 'clean', code: 1000, retryAfterMs: 0 })
     expect(disconnects).toHaveLength(1)
   })
 
