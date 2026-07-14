@@ -21,6 +21,16 @@ export class ChattoValidationError extends Error {
   }
 }
 
+export class ChattoAuthError extends Error {
+  constructor(
+    public readonly code: string,
+    message: string,
+  ) {
+    super(message)
+    this.name = 'ChattoAuthError'
+  }
+}
+
 export class ChattoParseError extends Error {
   constructor(
     public readonly issues: ZodIssue[],

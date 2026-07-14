@@ -1,4 +1,14 @@
-import { ChattoApiError, ChattoParseError, ChattoValidationError } from '../src/errors'
+import { ChattoApiError, ChattoParseError, ChattoValidationError, ChattoAuthError } from '../src/errors'
+
+describe('ChattoAuthError', () => {
+  it('carries a code and name', () => {
+    const err = new ChattoAuthError('no_credentials', 'cannot refresh')
+    expect(err).toBeInstanceOf(Error)
+    expect(err.name).toBe('ChattoAuthError')
+    expect(err.code).toBe('no_credentials')
+    expect(err.message).toBe('cannot refresh')
+  })
+})
 
 describe('ChattoApiError', () => {
   it('sets code, message, rawResponse and is an Error', () => {
