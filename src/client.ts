@@ -29,6 +29,8 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   private reconnectAttempt = 0
   private readonly reconnectOpts: Required<ReconnectOptions>
   private refreshTimer: ReturnType<typeof setInterval> | null = null
+  private closedByUser = false
+  private reconnectTimer: ReturnType<typeof setTimeout> | null = null
 
   constructor(
     options: ChattoClientOptions,
@@ -44,9 +46,11 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
       maxAttempts: options.reconnect?.maxAttempts ?? Infinity,
     }
     const getToken = () => this.store.getToken()
-    this.rest = new RestClient(options.baseUrl, getToken, async () => {
-      await this.store.refresh()
-    })
+    this.rest = new RestClient(
+      options.baseUrl,
+      getToken,
+      this.store.canRefresh() ? async () => { await this.store.refresh() } : undefined,
+    )
     this.realtime = realtimeFactory
       ? realtimeFactory(wsUrl, getToken)
       : new RealtimeConnection(wsUrl, getToken)
@@ -79,11 +83,18 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   }
 
   async connect(): Promise<void> {
+    this.closedByUser = false
     await this.realtime.connect()
     this.emit('ready')
   }
 
   async disconnect(): Promise<void> {
+    this.closedByUser = true
+    this.reconnecting = false
+    if (this.reconnectTimer != null) {
+      clearTimeout(this.reconnectTimer)
+      this.reconnectTimer = null
+    }
     if (this.refreshTimer != null) {
       clearInterval(this.refreshTimer)
       this.refreshTimer = null
@@ -121,6 +132,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
     this.realtime.on('error', (err: Error) => this.emit('error', err))
 
     this.realtime.on('close', (reason: CloseReason) => {
+      if (this.closedByUser) return
       if (reason.kind === 'clean' || reason.kind === 'fatal') {
         this.emit('disconnect')
         return
@@ -135,6 +147,7 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
   }
 
   private startReconnect(reason: CloseReason): void {
+    if (this.closedByUser) return
     if (this.reconnecting) return
     this.reconnecting = true
     this.reconnectAttempt = 0
@@ -156,7 +169,12 @@ export class ChattoClient extends EventEmitter<ClientEventMap> {
     const delay = Math.max(jittered, reason.retryAfterMs)
     this.reconnectAttempt = n + 1
     this.emit('reconnecting', this.reconnectAttempt, delay)
-    setTimeout(() => {
+    this.reconnectTimer = setTimeout(() => {
+      if (this.closedByUser) {
+        this.reconnecting = false
+        return
+      }
+      this.reconnectTimer = null
       this.doReconnect(reason).catch(err => {
         this.emit('error', err instanceof Error ? err : new Error(String(err)))
         this.attemptReconnect(reason)

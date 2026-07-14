@@ -88,6 +88,64 @@ client.on('messageCreate', message => {
 })
 ```
 
+### Auto-refresh & reconnect
+
+The client automatically handles token expiration and realtime disconnects. Enable automatic re-login on auth failure by passing credentials:
+
+```typescript
+const client = new ChattoClient({
+    baseUrl: "https://chat.example.com",
+    token: initialToken,
+    credentials: { login: "username", password: "password" }
+})
+```
+
+Alternatively, use `ChattoClient.login()` — it retains credentials automatically:
+
+```typescript
+const client = await ChattoClient.login({
+    baseUrl: "https://chat.example.com",
+    login: "username",
+    password: "password"
+})
+```
+
+**Realtime reconnection:** If the websocket drops (e.g. transient network failure), the client reconnects with exponential backoff + jitter. Configure via `reconnect` options:
+
+```typescript
+const client = new ChattoClient({
+    baseUrl: "https://chat.example.com",
+    token: initialToken,
+    credentials: { login: "username", password: "password" },
+    reconnect: {
+        baseDelayMs: 1000,     // initial delay (default)
+        maxDelayMs: 30000,     // cap (default)
+        factor: 2,             // exponential multiplier (default)
+        maxAttempts: Infinity  // attempts before giving up (default)
+    }
+})
+```
+
+**Token refresh:** Optionally refresh the token on an interval (e.g. to refresh every 5 minutes):
+
+```typescript
+const client = new ChattoClient({
+    baseUrl: "https://chat.example.com",
+    token: initialToken,
+    credentials: { login: "username", password: "password" },
+    refresh: { intervalMs: 5 * 60 * 1000 } // refresh every 5 minutes
+})
+```
+
+Listen for `tokenRefresh` (after successful re-login) and `reconnecting` (before each reconnect attempt):
+
+```typescript
+client.on('tokenRefresh', () => console.log('Token refreshed'))
+client.on('reconnecting', (attempt, delayMs) => {
+    console.log(`Reconnecting (attempt ${attempt}) in ${delayMs}ms`)
+})
+```
+
 I do not own nor claim any ownership of the Chatto name or brand. Chatto and similar branding is all owned by their respective owners.
 I do not have any affiliation with Chatto.
 
