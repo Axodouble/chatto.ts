@@ -88,6 +88,28 @@ client.on('messageCreate', message => {
 })
 ```
 
+## Setting your status
+
+Presence is transient — the client refreshes it automatically every 30s while set.
+
+```typescript
+// Presence: 'online' | 'away' | 'dnd' | 'offline' (aliases: 'idle', 'invisible')
+await client.setStatus('online')
+
+// Appear offline: stops refreshing; the server record expires via TTL.
+await client.setStatus('offline')
+
+// Custom status (emoji + text, optional expiry)
+await client.setCustomStatus({ emoji: '🎧', text: 'listening', expiresAt: new Date(Date.now() + 3600_000) })
+await client.clearCustomStatus()
+```
+
+Disable auto-refresh (one-shot presence updates you manage yourself):
+
+```typescript
+const client = new ChattoClient({ baseUrl, token, presence: { autoRefresh: false } })
+```
+
 ### Auto-refresh & reconnect
 
 The client automatically handles token expiration and realtime disconnects. Enable automatic re-login on auth failure by passing credentials:

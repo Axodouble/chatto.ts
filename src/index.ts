@@ -27,4 +27,8 @@ export type {
   VideoProcessingData,
   FileInput,
   ThumbnailOptions,
+  PresenceInput,
+  CustomStatusInput,
+  CustomStatus,
+  PresenceOptions,
 } from './types'
