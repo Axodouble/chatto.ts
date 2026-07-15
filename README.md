@@ -7,7 +7,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-3178c6&logo=typescript&logoColor=white?style=flat)](https://www.typescriptlang.org/)
 
 A Chatto Typescript library to interface with a Chatto instance.
-Tested against `v0.4.11` of Chatto.
+Tested against `v0.4.12` of Chatto.
 
 If you are looking for a `Java` SDK, [feel free to use this SDK made by a fellow developer](https://github.com/freakynit/chatto-java-sdk)!
 
