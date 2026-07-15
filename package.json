@@ -1,7 +1,12 @@
 {
   "name": "chatto.ts",
-  "version": "0.4.9",
-  "description": "Discord.js-like TypeScript SDK for Chatto",
+  "version": "0.4.10",
+  "description": "TypeScript SDK for Chatto",
+  "author": {
+    "name": "Axodouble",
+    "email": "axodouble@axodouble.com",
+    "url": "https://axodouble.com"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/Axodouble/chatto.ts.git"
@@ -29,12 +34,12 @@
     "prepublishOnly": "tsc"
   },
   "dependencies": {
-    "protobufjs": "^8.7.0",
-    "ws": "^8.21.0",
+    "protobufjs": "^8.7.1",
+    "ws": "^8.21.1",
     "zod": "^4.4.3"
   },
   "devDependencies": {
-    "@types/bun": "latest",
+    "@types/bun": "^1.3.14",
     "@types/ws": "^8.18.1",
     "typescript": "^7.0.2"
   }
