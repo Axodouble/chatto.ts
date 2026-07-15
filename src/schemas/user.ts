@@ -31,8 +31,10 @@ export const DirectoryMemberSchema = z.object({
 })
 
 export const GetUserResponseSchema = z.object({ user: DirectoryMemberSchema })
-export const BatchGetUsersResponseSchema = z.object({ users: z.array(DirectoryMemberSchema) })
-export const ListUsersResponseSchema = z.object({ users: z.array(DirectoryMemberSchema) })
+// proto3 JSON omits empty repeated fields, so `users` is absent when there are
+// no results (e.g. a search matching nobody comes back as `{ page: {} }`).
+export const BatchGetUsersResponseSchema = z.object({ users: z.array(DirectoryMemberSchema).default([]) })
+export const ListUsersResponseSchema = z.object({ users: z.array(DirectoryMemberSchema).default([]) })
 
 export const UpdatePresenceResponseSchema = z.object({
   status: PresenceStatusSchema,

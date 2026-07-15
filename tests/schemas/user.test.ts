@@ -79,6 +79,12 @@ describe('BatchGetUsersResponseSchema', () => {
     expect(result.users).toHaveLength(1)
     expect(result.users[0].user.id).toBe('user_1')
   })
+
+  // proto3 JSON omits empty repeated fields, so an all-empty result has no `users` key.
+  it('defaults users to empty array when absent', () => {
+    const result = BatchGetUsersResponseSchema.parse({})
+    expect(result.users).toEqual([])
+  })
 })
 
 describe('ListUsersResponseSchema', () => {
@@ -86,6 +92,13 @@ describe('ListUsersResponseSchema', () => {
     const result = ListUsersResponseSchema.parse({ users: [validMember] })
     expect(result.users).toHaveLength(1)
     expect(result.users[0].user.id).toBe('user_1')
+  })
+
+  // A search that matches nobody comes back as `{ page: {} }` — the server omits
+  // the empty `users` array entirely (proto3 JSON behavior).
+  it('defaults users to empty array when the server omits it (no results)', () => {
+    const result = ListUsersResponseSchema.parse({ page: {} })
+    expect(result.users).toEqual([])
   })
 })
 

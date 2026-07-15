@@ -38,6 +38,12 @@ describe('ListRoomsResponseSchema', () => {
     expect(res.rooms).toHaveLength(1)
     expect(res.rooms[0].room.id).toBe('room_1')
   })
+
+  // proto3 JSON omits empty repeated fields, so a member of no rooms gets `{}`.
+  it('defaults rooms to empty array when absent', () => {
+    const res = ListRoomsResponseSchema.parse({})
+    expect(res.rooms).toEqual([])
+  })
 })
 
 describe('GetRoomResponseSchema', () => {
@@ -72,5 +78,12 @@ describe('GetRoomEventsResponseSchema', () => {
     const res = GetRoomEventsResponseSchema.parse({ page: { events: [] } })
     expect(res.page.hasOlder).toBe(false)
     expect(res.page.hasNewer).toBe(false)
+  })
+
+  // An empty page comes back as `{ page: {} }` — the repeated `events` field is
+  // omitted (proto3 JSON), so it must default to [] rather than being required.
+  it('defaults events to empty array when the page is empty', () => {
+    const res = GetRoomEventsResponseSchema.parse({ page: {} })
+    expect(res.page.events).toEqual([])
   })
 })

@@ -30,7 +30,7 @@ async function expectEvent<T, R>(
   timeoutMs = 15000,
 ): Promise<{ triggered: R; event: T }> {
   const emitter = client as unknown as EmitterLike
-  let cleanup = () => {}
+  let cleanup = () => { }
   const received = new Promise<T>((resolve, reject) => {
     const handler = (payload: T) => {
       if (predicate(payload)) {
@@ -67,8 +67,10 @@ describe.if(hasCreds)('live integration', () => {
     await client.connect()
     try {
       const users = await client.users.list()
+      const nonExistentUsers = await client.users.list({search: Date.now().toString()})
       expect(Array.isArray(users)).toBe(true)
       expect(users.length).toBeGreaterThan(0)
+      expect(nonExistentUsers.length).toBe(0)
       expect(users[0].displayName).toBeString()
     } finally {
       await client.disconnect()

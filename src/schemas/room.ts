@@ -16,8 +16,10 @@ const RoomWithViewerStateSchema = z.object({
   viewerState: z.unknown().optional(),
 })
 
+// proto3 JSON omits empty repeated fields, so `rooms` is absent when the caller
+// is a member of no rooms.
 export const ListRoomsResponseSchema = z.object({
-  rooms: z.array(RoomWithViewerStateSchema),
+  rooms: z.array(RoomWithViewerStateSchema).default([]),
 })
 
 export const GetRoomResponseSchema = z.object({
@@ -37,7 +39,8 @@ const RoomTimelineEventSchema = z.object({
 
 export const GetRoomEventsResponseSchema = z.object({
   page: z.object({
-    events: z.array(RoomTimelineEventSchema),
+    // Omitted entirely (proto3 JSON) when a page has no events — default to [].
+    events: z.array(RoomTimelineEventSchema).default([]),
     startCursor: z.string().optional(),
     endCursor: z.string().optional(),
     hasOlder: z.boolean().default(false),
