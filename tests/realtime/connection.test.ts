@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'bun:test'
+import { describe, it, expect, jest } from 'bun:test'
 import { EventEmitter } from 'events'
 import protobuf from 'protobufjs'
 import { RealtimeConnection } from '../../src/realtime/connection'
@@ -30,8 +30,14 @@ class MockWs extends EventEmitter {
   readyState = 1 // OPEN
   binaryType = 'nodebuffer'
   sent: Buffer[] = []
+  terminated = false
   send(data: Buffer) { this.sent.push(data) }
   close() { this.readyState = 3 }
+  terminate() {
+    this.terminated = true
+    this.readyState = 3
+    this.emit('close', 1006, Buffer.from(''))
+  }
 }
 
 function makeConn(mockWs: MockWs): RealtimeConnection {
@@ -154,6 +160,65 @@ describe('RealtimeConnection', () => {
       })
     })
     await expect(p).rejects.toThrow()
+  })
+
+  it('terminates a half-open socket when heartbeats go unanswered', async () => {
+    jest.useFakeTimers()
+    try {
+      const mockWs = new MockWs()
+      const conn = makeConn(mockWs)
+      const p = conn.connect()
+      // Drive the handshake synchronously (handlers are attached synchronously
+      // inside connect()'s executor).
+      mockWs.emit('open')
+      mockWs.emit('message', buildServerFrameBuffer({ hello: { heartbeat_interval_seconds: 1 } }))
+      mockWs.emit('message', buildServerFrameBuffer({ subscribed: {} }))
+      await p
+
+      const reasons: any[] = []
+      conn.on('close', r => reasons.push(r))
+
+      // First tick sends a ping and marks the socket pending. The server never
+      // answers (half-open TCP), so the second tick must detect the dead socket
+      // and terminate it, producing a retryable close so reconnect can run.
+      jest.advanceTimersByTime(2100)
+
+      expect(mockWs.terminated).toBe(true)
+      expect(reasons).toHaveLength(1)
+      expect(reasons[0].kind).toBe('retry')
+    } finally {
+      jest.useRealTimers()
+    }
+  })
+
+  it('keeps a socket alive while the server answers heartbeats', async () => {
+    jest.useFakeTimers()
+    try {
+      const mockWs = new MockWs()
+      const conn = makeConn(mockWs)
+      const p = conn.connect()
+      mockWs.emit('open')
+      mockWs.emit('message', buildServerFrameBuffer({ hello: { heartbeat_interval_seconds: 1 } }))
+      mockWs.emit('message', buildServerFrameBuffer({ subscribed: {} }))
+      await p
+
+      const reasons: any[] = []
+      conn.on('close', r => reasons.push(r))
+
+      // Server answers each heartbeat window with an event frame → liveness stays.
+      for (let i = 0; i < 5; i++) {
+        jest.advanceTimersByTime(1000)
+        mockWs.emit('message', buildServerFrameBuffer({
+          event: { id: `env_${i}`, created_at: { seconds: 1752055200, nanos: 0 }, actor_id: 'u' },
+        }))
+      }
+
+      expect(mockWs.terminated).toBe(false)
+      expect(reasons).toHaveLength(0)
+      conn.disconnect()
+    } finally {
+      jest.useRealTimers()
+    }
   })
 
   it('emits close only once when frame close precedes ws close', async () => {

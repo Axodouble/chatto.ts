@@ -29,6 +29,7 @@ export class RealtimeConnection extends EventEmitter<RealtimeConnectionEvents> {
   private heartbeatTimer: ReturnType<typeof setInterval> | null = null
   private userClosed = false
   private closeEmitted = false
+  private alive = false
 
   constructor(
     private readonly wsUrl: string,
@@ -57,6 +58,7 @@ export class RealtimeConnection extends EventEmitter<RealtimeConnectionEvents> {
       })
 
       this.ws.on('message', (data: Buffer) => {
+        this.alive = true
         let frame: ServerFrame
         try {
           frame = decodeServerFrame(data)
@@ -67,7 +69,13 @@ export class RealtimeConnection extends EventEmitter<RealtimeConnectionEvents> {
 
         if (frame.hello != null) {
           const intervalMs = frame.hello.heartbeat_interval_seconds * 1000
+          this.alive = true
           this.heartbeatTimer = setInterval(() => {
+            if (!this.alive) {
+              this.terminate()
+              return
+            }
+            this.alive = false
             this.send({ ping: { nonce: Date.now().toString(36) } })
           }, intervalMs)
           this.send({ subscribe_events: {} })
@@ -129,6 +137,17 @@ export class RealtimeConnection extends EventEmitter<RealtimeConnectionEvents> {
   private send(frame: ClientFrame): void {
     if (this.ws?.readyState === WebSocket.OPEN) {
       this.ws.send(encodeClientFrame(frame))
+    }
+  }
+
+  private terminate(): void {
+    this.cleanup()
+    const ws = this.ws as (WebSocket & { terminate?: () => void }) | null
+    if (ws == null) return
+    if (typeof ws.terminate === 'function') {
+      ws.terminate()
+    } else {
+      ws.close()
     }
   }
 
